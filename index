@@ -1,0 +1,239 @@
++<!doctype html>
++<html lang="en">
++<head>
++  <meta charset="UTF-8" />
++  <meta name="viewport" content="width=device-width, initial-scale=1" />
++  <title>Micro:bit + GitHub Pages Test Console</title>
++  <style>
++    :root {
++      color-scheme: light dark;
++      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
++    }
++
++    body {
++      margin: 0;
++      padding: 1.5rem;
++      max-width: 960px;
++      line-height: 1.6;
++    }
++
++    header {
++      margin-bottom: 1rem;
++    }
++
++    button {
++      padding: 0.6rem 1rem;
++      border-radius: 6px;
++      border: 1px solid #888;
++      background: linear-gradient(180deg, #f6f6f6, #e0e0e0);
++      cursor: pointer;
++    }
++
++    button:disabled {
++      cursor: not-allowed;
++      opacity: 0.6;
++    }
++
++    textarea {
++      width: 100%;
++      min-height: 240px;
++      resize: vertical;
++      border-radius: 8px;
++      padding: 0.75rem;
++      font-family: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
++    }
++
++    .row {
++      display: flex;
++      gap: 0.75rem;
++      margin-top: 0.5rem;
++    }
++
++    .row input[type="text"] {
++      flex: 1;
++      padding: 0.65rem;
++      border-radius: 6px;
++      border: 1px solid #888;
++      font-size: 1rem;
++      font-family: inherit;
++    }
++
++    .hint {
++      font-size: 0.9rem;
++      opacity: 0.85;
++    }
++
++    code {
++      background: rgba(0, 0, 0, 0.08);
++      padding: 0.15rem 0.35rem;
++      border-radius: 4px;
++    }
++  </style>
++</head>
++<body>
++  <header>
++    <h1>Micro:bit ↔ GitHub Pages Test Console</h1>
++    <p>Use this page to try serial-style messaging between the browser and a micro:bit (with Hummingbird).
++      Open the console, connect over Web Serial, and send text commands like <code>LED ON</code> or
++      <code>SERVO 1 90</code>. The provided MicroPython sample understands a few basic commands.</p>
++  </header>
++
++  <section>
++    <div class="row">
++      <button id="connect">Connect micro:bit (Web Serial)</button>
++      <button id="disconnect" disabled>Disconnect</button>
++    </div>
++    <p class="hint">Requires a Chromium-based browser with the <code>navigator.serial</code> API. The micro:bit
++      should appear as a USB serial device (vendor ID 0x0D28). When connected, this console sends newline-terminated
++      text commands and shows responses from the board.</p>
++  </section>
++
++  <section>
++    <h2>Send a command</h2>
++    <div class="row">
++      <input id="command" type="text" placeholder="Try: LED ON" />
++      <button id="send" disabled>Send</button>
++    </div>
++    <p class="hint">Commands are sent with a trailing newline. The sample firmware supports: <code>LED ON</code>,
++      <code>LED OFF</code>, <code>SERVO 1 0-180</code>, and <code>SENSOR?</code> (returns light reading).</p>
++  </section>
++
++  <section>
++    <h2>Log</h2>
++    <textarea id="log" readonly>Click "Connect" to request access to the micro:bit serial port...\n</textarea>
++  </section>
++
++  <script>
++    const connectBtn = document.querySelector('#connect');
++    const disconnectBtn = document.querySelector('#disconnect');
++    const sendBtn = document.querySelector('#send');
++    const commandInput = document.querySelector('#command');
++    const logArea = document.querySelector('#log');
++
++    let port;
++    let reader;
++    let writer;
++    let textEncoder;
++    let textDecoder;
++    let readableStreamClosed;
++    let writableStreamClosed;
++    let readLoopActive = false;
++
++    function log(message) {
++      const now = new Date().toLocaleTimeString();
++      logArea.value += `[${now}] ${message}\n`;
++      logArea.scrollTop = logArea.scrollHeight;
++    }
++
++    function setConnected(state) {
++      connectBtn.disabled = state;
++      disconnectBtn.disabled = !state;
++      sendBtn.disabled = !state;
++      commandInput.disabled = !state;
++    }
++
++    async function startReading() {
++      readLoopActive = true;
++      while (readLoopActive && reader) {
++        const { value, done } = await reader.read();
++        if (done) {
++          break;
++        }
++        if (value) {
++          log(`micro:bit → ${value.trimEnd()}`);
++        }
++      }
++    }
++
++    async function connect() {
++      if (!('serial' in navigator)) {
++        log('Web Serial is not available in this browser. Try a recent version of Chrome, Edge, or Opera.');
++        return;
++      }
++      try {
++        port = await navigator.serial.requestPort({ filters: [{ usbVendorId: 0x0d28 }] });
++        await port.open({ baudRate: 115200 });
++
++        textEncoder = new TextEncoderStream();
++        writableStreamClosed = textEncoder.readable.pipeTo(port.writable);
++        writer = textEncoder.writable.getWriter();
++
++        textDecoder = new TextDecoderStream();
++        readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
++        reader = textDecoder.readable.getReader();
++
++        setConnected(true);
++        log('Connected to micro:bit serial port.');
++        startReading().catch((err) => log(`Read error: ${err.message}`));
++      } catch (err) {
++        log(`Connection failed: ${err.message}`);
++      }
++    }
++
++    async function disconnect() {
++      readLoopActive = false;
++      sendBtn.disabled = true;
++      if (reader) {
++        try {
++          await reader.cancel();
++        } catch (err) {
++          log(`Error canceling reader: ${err.message}`);
++        }
++        reader.releaseLock();
++        reader = null;
++      }
++      if (textDecoder && readableStreamClosed) {
++        await readableStreamClosed.catch(() => {});
++      }
++      if (writer) {
++        try {
++          await writer.close();
++        } catch (err) {
++          log(`Error closing writer: ${err.message}`);
++        }
++        writer.releaseLock();
++        writer = null;
++      }
++      if (textEncoder && writableStreamClosed) {
++        await writableStreamClosed.catch(() => {});
++      }
++      if (port) {
++        try {
++          await port.close();
++          log('Disconnected.');
++        } catch (err) {
++          log(`Error closing port: ${err.message}`);
++        }
++        port = null;
++      }
++      setConnected(false);
++    }
++
++    async function sendCommand() {
++      if (!writer) {
++        log('Not connected.');
++        return;
++      }
++      const command = commandInput.value.trim();
++      if (!command) return;
++      try {
++        await writer.write(`${command}\n`);
++        log(`You → ${command}`);
++        commandInput.value = '';
++      } catch (err) {
++        log(`Send failed: ${err.message}`);
++      }
++    }
++
++    connectBtn.addEventListener('click', connect);
++    disconnectBtn.addEventListener('click', disconnect);
++    sendBtn.addEventListener('click', sendCommand);
++    commandInput.addEventListener('keydown', (event) => {
++      if (event.key === 'Enter') {
++        event.preventDefault();
++        sendCommand();
++      }
++    });
++  </script>
++</body>
++</html>
