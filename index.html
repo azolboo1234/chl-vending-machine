@@ -140,6 +140,8 @@
     }
 
     async function startReading() {
+      // Accumulate text until we see a newline to avoid chopped/misspelled log lines.
+      let buffer = '';
       readLoopActive = true;
       while (readLoopActive && reader) {
         const { value, done } = await reader.read();
@@ -147,13 +149,19 @@
           break;
         }
         if (value) {
-          const trimmed = value.trim();
-          log(`micro:bit → ${trimmed}`);
-          if (trimmed === 'BTN:A') {
-            const picked = chooseNumber();
-            const response = picked === 0 ? 'CHOICE 0' : 'CHOICE 1';
-            log(`Picked ${picked}; sending ${response}`);
-            sendRaw(response).catch((err) => log(`Auto-send failed: ${err.message}`));
+          buffer += value;
+          const parts = buffer.split(/\r?\n/);
+          buffer = parts.pop() || '';
+          for (const part of parts) {
+            const trimmed = part.trim();
+            if (!trimmed) continue;
+            log(`micro:bit → ${trimmed}`);
+            if (trimmed === 'BTN:A') {
+              const picked = chooseNumber();
+              const response = picked === 0 ? 'CHOICE 0' : 'CHOICE 1';
+              log(`Picked ${picked}; sending ${response}`);
+              sendRaw(response).catch((err) => log(`Auto-send failed: ${err.message}`));
+            }
           }
         }
       }
