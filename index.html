@@ -75,7 +75,9 @@
     <h1>Micro:bit ↔ GitHub Pages Test Console</h1>
     <p>Use this page to try serial-style messaging between the browser and a micro:bit (with Hummingbird).
       Open the console, connect over Web Serial, and send text commands like <code>LED ON</code> or
-      <code>SERVO 1 90</code>. The provided MicroPython sample understands a few basic commands.</p>
+      <code>SERVO 1 90</code>. The provided MicroPython sample understands a few basic commands. Press button
+      <strong>A</strong> on the micro:bit to have the page pick 0 or 1 and send the result back as
+      <code>CHOICE 0</code> / <code>CHOICE 1</code>; the micro:bit will show the number on its LEDs.</p>
   </header>
 
   <section>
@@ -119,6 +121,11 @@
     let writableStreamClosed;
     let readLoopActive = false;
 
+    function chooseNumber() {
+      // Returns 0 or 1 with equal probability.
+      return Math.random() < 0.5 ? 0 : 1;
+    }
+
     function log(message) {
       const now = new Date().toLocaleTimeString();
       logArea.value += `[${now}] ${message}\n`;
@@ -140,7 +147,14 @@
           break;
         }
         if (value) {
-          log(`micro:bit → ${value.trimEnd()}`);
+          const trimmed = value.trim();
+          log(`micro:bit → ${trimmed}`);
+          if (trimmed === 'BTN:A') {
+            const picked = chooseNumber();
+            const response = picked === 0 ? 'CHOICE 0' : 'CHOICE 1';
+            log(`Picked ${picked}; sending ${response}`);
+            sendRaw(response).catch((err) => log(`Auto-send failed: ${err.message}`));
+          }
         }
       }
     }
@@ -209,20 +223,26 @@
       setConnected(false);
     }
 
-    async function sendCommand() {
+    async function sendRaw(text) {
       if (!writer) {
         log('Not connected.');
         return;
       }
-      const command = commandInput.value.trim();
+      const command = text.trim();
       if (!command) return;
       try {
         await writer.write(`${command}\n`);
         log(`You → ${command}`);
-        commandInput.value = '';
       } catch (err) {
         log(`Send failed: ${err.message}`);
       }
+    }
+
+    async function sendCommand() {
+      const command = commandInput.value.trim();
+      if (!command) return;
+      await sendRaw(command);
+      commandInput.value = '';
     }
 
     connectBtn.addEventListener('click', connect);
