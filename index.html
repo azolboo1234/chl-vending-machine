@@ -72,12 +72,12 @@
 </head>
 <body>
   <header>
-    <h1>Micro:bit ↔ GitHub Pages Test Console</h1>
-    <p>Use this page to try serial-style messaging between the browser and a micro:bit (with Hummingbird).
+    <h1>Micro:bit ↔ Vending Machine Test Console</h1>
+    <p>page to test the serial messaging between the browser and a micro:bit (if you have the Hummingbird).
       Open the console, connect over Web Serial, and send text commands like <code>LED ON</code> or
-      <code>SERVO 1 90</code>. The provided MicroPython sample understands a few basic commands. Press button
+      <code>SERVO 1 90</code>. The MicroPython test can use a few basic commands. Press button
       <strong>A</strong> on the micro:bit to have the page pick 0 or 1 and send the result back as
-      <code>CHOICE 0</code> / <code>CHOICE 1</code>; the micro:bit will show the number on its LEDs.</p>
+      <code>CHOICE 0</code> / <code>CHOICE 1</code>; the micro:bit should show the number on its LEDs.</p>
   </header>
 
   <section>
@@ -85,7 +85,7 @@
       <button id="connect">Connect micro:bit (Web Serial)</button>
       <button id="disconnect" disabled>Disconnect</button>
     </div>
-    <p class="hint">Requires a Chromium-based browser with the <code>navigator.serial</code> API. The micro:bit
+    <p class="hint">Requires a Chromium-based browser with the <code>navigator.serial</code> API (it don't work with others sadly). The micro:bit
       should appear as a USB serial device (vendor ID 0x0D28). When connected, this console sends newline-terminated
       text commands and shows responses from the board.</p>
   </section>
@@ -96,7 +96,7 @@
       <input id="command" type="text" placeholder="Try: LED ON" />
       <button id="send" disabled>Send</button>
     </div>
-    <p class="hint">Commands are sent with a trailing newline. The sample firmware supports: <code>LED ON</code>,
+    <p class="hint">Commands are sent with a trailing newline. The test I madew supports: <code>LED ON</code>,
       <code>LED OFF</code>, <code>SERVO 1 0-180</code>, and <code>SENSOR?</code> (returns light reading).</p>
   </section>
 
