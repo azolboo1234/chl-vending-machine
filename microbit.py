@@ -1,7 +1,7 @@
 from microbit import *
 import utime
 
-# Minimal Micro:bit Web Serial demo.
+# Minimal Micro:bit Web Serial demo for the candy slot machine.
 # Load this .py file directly in the Micro:bit Python Editor (no GitHub link needed).
 # Copy it from the Raw view so the editor does not wrap or alter characters.
 
@@ -41,6 +41,21 @@ def spin_servo(clockwise):
     _pulse_servo(SERVO_PULSE_STOP, SERVO_STOP_CYCLES)  # precise stop
 
 
+def handle_payout(kind):
+    if kind == "GUMBALL":
+        display.show("G")
+        spin_servo(True)
+        uart.write("PAYOUT:GUMBALL\n")
+    elif kind == "JOLLY":
+        display.show("J")
+        spin_servo(False)
+        uart.write("PAYOUT:JOLLY\n")
+    else:
+        display.show(Image.NO)
+        _pulse_servo(SERVO_PULSE_STOP, SERVO_STOP_CYCLES)
+        uart.write("PAYOUT:NONE\n")
+
+
 uart.init(baudrate=115200)
 uart.write("READY\n")
 
@@ -64,16 +79,13 @@ while True:
         elif cmd == "LED OFF":
             display.clear()
             uart.write("LED:OFF\n")
-        elif cmd == "CHOICE 0":
-            display.show("0")
-            spin_servo(False)  # counterclockwise
-            uart.write("SHOW:0\n")
-        elif cmd == "CHOICE 1":
-            display.show("1")
-            spin_servo(True)  # clockwise
-            uart.write("SHOW:1\n")
+        elif cmd == "PAYOUT GUMBALL":
+            handle_payout("GUMBALL")
+        elif cmd == "PAYOUT JOLLY":
+            handle_payout("JOLLY")
+        elif cmd == "PAYOUT NONE":
+            handle_payout("NONE")
         elif cmd.startswith("SERVO 1 "):
-            # Replace this stub with your Hummingbird servo driver if available.
             value = cmd.split(" ")[-1]
             uart.write("SERVO1:" + value + "\n")
         elif cmd == "SENSOR?":
