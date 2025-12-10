@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Micro:bit + GitHub Pages Test Console</title>
+  <title>Candy Slot Machine · micro:bit + Hummingbird</title>
   <style>
     :root {
       color-scheme: light dark;
@@ -21,12 +21,17 @@
       margin-bottom: 1rem;
     }
 
+    h1 {
+      margin: 0 0 0.35rem;
+    }
+
     button {
       padding: 0.6rem 1rem;
       border-radius: 6px;
       border: 1px solid #888;
       background: linear-gradient(180deg, #f6f6f6, #e0e0e0);
       cursor: pointer;
+      font-weight: 600;
     }
 
     button:disabled {
@@ -36,7 +41,7 @@
 
     textarea {
       width: 100%;
-      min-height: 240px;
+      min-height: 260px;
       resize: vertical;
       border-radius: 8px;
       padding: 0.75rem;
@@ -46,16 +51,20 @@
     .row {
       display: flex;
       gap: 0.75rem;
-      margin-top: 0.5rem;
+      align-items: center;
+      margin-top: 0.75rem;
+      flex-wrap: wrap;
     }
 
-    .row input[type="text"] {
-      flex: 1;
-      padding: 0.65rem;
-      border-radius: 6px;
+    .pill {
+      padding: 0.65rem 0.85rem;
+      border-radius: 999px;
       border: 1px solid #888;
-      font-size: 1rem;
-      font-family: inherit;
+      background: rgba(0, 0, 0, 0.04);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-weight: 600;
     }
 
     .hint {
@@ -68,16 +77,121 @@
       padding: 0.15rem 0.35rem;
       border-radius: 4px;
     }
+
+    .slot-panel {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 1rem;
+      align-items: stretch;
+      margin-top: 1rem;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      border-radius: 12px;
+      padding: 1rem;
+      background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.03));
+    }
+
+    .slot-window {
+      position: relative;
+      border: 2px solid #c7923e;
+      background: linear-gradient(180deg, #1e1e1e, #2a2a2a);
+      border-radius: 10px;
+      height: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.08);
+    }
+
+    .slot-window img, .slot-window .slot-none {
+      width: 140px;
+      height: 140px;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.35));
+      transition: opacity 120ms ease;
+    }
+
+    .slot-none {
+      color: #f87171;
+      font-weight: 700;
+      font-size: 1.3rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .slot-label {
+      position: absolute;
+      bottom: 6px;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      font-weight: 700;
+      color: #ffd166;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+    }
+
+    .options {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .option-card {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.5rem 0.65rem;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.03);
+    }
+
+    .option-card img {
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+    }
+
+    .option-title {
+      font-weight: 700;
+    }
+
+    .join-wrap {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .select-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      font-weight: 600;
+    }
+
+    .join-wrap input[type="text"], select {
+      padding: 0.65rem;
+      border-radius: 6px;
+      border: 1px solid #888;
+      font-size: 1rem;
+      font-family: inherit;
+    }
+
+    .slot-footer {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
   </style>
 </head>
 <body>
   <header>
-    <h1>Micro:bit ↔ Vending Machine Test Console</h1>
-    <p>page to test the serial messaging between the browser and a micro:bit (if you have the Hummingbird).
-      Open the console, connect over Web Serial, and send text commands like <code>LED ON</code> or
-      <code>SERVO 1 90</code>. The MicroPython test can use a few basic commands. Press button
-      <strong>A</strong> on the micro:bit to have the page pick 0 or 1 and send the result back as
-      <code>CHOICE 0</code> / <code>CHOICE 1</code>; the micro:bit should show the number on its LEDs.</p>
+    <h1>Candy Slot Machine</h1>
+    <p>Press button <strong>A</strong> on the micro:bit to spin a one-column candy slot. The browser weights the spin toward the chosen preference
+      (75% preferred candy, 15% the other option, 10% no candy), shows the pulled item, and sends the result back to the micro:bit
+      so the Hummingbird can react.</p>
   </header>
 
   <section>
@@ -85,19 +199,60 @@
       <button id="connect">Connect micro:bit (Web Serial)</button>
       <button id="disconnect" disabled>Disconnect</button>
     </div>
-    <p class="hint">Requires a Chromium-based browser with the <code>navigator.serial</code> API (it don't work with others sadly). The micro:bit
-      should appear as a USB serial device (vendor ID 0x0D28). When connected, this console sends newline-terminated
-      text commands and shows responses from the board.</p>
+    <p class="hint">Use a Chromium-based browser with <code>navigator.serial</code>. Only the host computer with the micro:bit plugged in
+      should connect; guests can still watch the log via the join code.</p>
   </section>
 
   <section>
-    <h2>Send a command</h2>
-    <div class="row">
-      <input id="command" type="text" placeholder="Try: LED ON" />
-      <button id="send" disabled>Send</button>
+    <h2>Share this session</h2>
+    <p class="hint">Host on the machine with the micro:bit attached. Share the join code so others can watch the log in real time.</p>
+    <div class="row join-wrap">
+      <label class="select-wrap">Role
+        <select id="role">
+          <option value="host">Host (micro:bit plugged in)</option>
+          <option value="guest">Guest (view log)</option>
+        </select>
+      </label>
+      <div id="host-code" class="pill">Join code: <code id="join-code">—</code></div>
+      <div id="guest-join" class="row" style="display: none; align-items: center;">
+        <input id="join-input" type="text" placeholder="Enter join code" />
+        <button id="join-btn">Join</button>
+        <span id="join-status" class="hint"></span>
+      </div>
     </div>
-    <p class="hint">Commands are sent with a trailing newline. The test I madew supports: <code>LED ON</code>,
-      <code>LED OFF</code>, <code>SERVO 1 0-180</code>, and <code>SENSOR?</code> (returns light reading).</p>
+  </section>
+
+  <section>
+    <h2>Slot machine</h2>
+    <div class="slot-panel">
+      <div class="slot-window" aria-live="polite">
+        <img id="slot-image" src="assets/gumball.png" alt="Gumball" />
+        <div id="slot-none" class="slot-none" style="display: none;">No candy</div>
+        <div id="slot-label" class="slot-label">Waiting for button A...</div>
+      </div>
+      <div class="options">
+        <div class="option-card">
+          <input type="radio" id="pref-gumball" name="preference" value="gumball" checked />
+          <img src="assets/gumball.png" alt="Gumball" />
+          <div>
+            <div class="option-title">Prefer gumball (75% odds)</div>
+            <div class="hint">Otherwise 15% Jolly Rancher, 10% no candy.</div>
+          </div>
+        </div>
+        <div class="option-card">
+          <input type="radio" id="pref-jolly" name="preference" value="jolly" />
+          <img src="assets/jolly-rancher.png" alt="Jolly Rancher" />
+          <div>
+            <div class="option-title">Prefer Jolly Rancher (75% odds)</div>
+            <div class="hint">Otherwise 15% gumball, 10% no candy.</div>
+          </div>
+        </div>
+        <div class="slot-footer">
+          <span class="hint">Press button A on the micro:bit to spin. The result is sent back over serial as
+            <code>PAYOUT GUMBALL</code>, <code>PAYOUT JOLLY</code>, or <code>PAYOUT NONE</code>.</span>
+        </div>
+      </div>
+    </div>
   </section>
 
   <section>
@@ -105,12 +260,22 @@
     <textarea id="log" readonly>Click "Connect" to request access to the micro:bit serial port...\n</textarea>
   </section>
 
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <script>
     const connectBtn = document.querySelector('#connect');
     const disconnectBtn = document.querySelector('#disconnect');
-    const sendBtn = document.querySelector('#send');
-    const commandInput = document.querySelector('#command');
     const logArea = document.querySelector('#log');
+    const roleSelect = document.querySelector('#role');
+    const hostCodeWrap = document.querySelector('#host-code');
+    const joinCodeLabel = document.querySelector('#join-code');
+    const guestJoinWrap = document.querySelector('#guest-join');
+    const joinInput = document.querySelector('#join-input');
+    const joinBtn = document.querySelector('#join-btn');
+    const joinStatus = document.querySelector('#join-status');
+    const slotImage = document.querySelector('#slot-image');
+    const slotNone = document.querySelector('#slot-none');
+    const slotLabel = document.querySelector('#slot-label');
+    const preferenceRadios = document.querySelectorAll('input[name="preference"]');
 
     let port;
     let reader;
@@ -120,27 +285,128 @@
     let readableStreamClosed;
     let writableStreamClosed;
     let readLoopActive = false;
+    let role = 'host';
+    let peer;
+    let hostConnection;
+    const remoteConnections = new Map();
 
-    function chooseNumber() {
-      // Returns 0 or 1 with equal probability.
-      return Math.random() < 0.5 ? 0 : 1;
+    function resetPeer() {
+      if (peer) {
+        try {
+          peer.destroy();
+        } catch (err) {
+          log(`Peer cleanup error: ${err.message}`);
+        }
+      }
+      peer = null;
+      hostConnection = null;
+      remoteConnections.clear();
+      joinCodeLabel.textContent = '—';
+      joinStatus.textContent = '';
+    }
+
+    function updateRoleUI() {
+      if (role === 'host') {
+        hostCodeWrap.style.display = 'inline-flex';
+        guestJoinWrap.style.display = 'none';
+        connectBtn.disabled = false;
+      } else {
+        hostCodeWrap.style.display = 'none';
+        guestJoinWrap.style.display = 'flex';
+        connectBtn.disabled = true;
+        disconnect();
+      }
+    }
+
+    function randomId() {
+      return `mb-${Math.random().toString(36).slice(2, 8)}`;
+    }
+
+    function startHostPeer() {
+      peer = new Peer(randomId(), { debug: 1 });
+      peer.on('open', (id) => {
+        joinCodeLabel.textContent = id;
+        log(`Share this join code so others can watch the log: ${id}`);
+      });
+      peer.on('connection', (conn) => {
+        remoteConnections.set(conn.peer, conn);
+        log(`Remote joined: ${conn.peer}`);
+        conn.on('data', (data) => handleRemoteData(conn, data));
+        conn.on('close', () => {
+          remoteConnections.delete(conn.peer);
+          log(`Remote left: ${conn.peer}`);
+        });
+      });
+      peer.on('error', (err) => log(`Peer error: ${err.message}`));
+    }
+
+    function startGuestPeer() {
+      peer = new Peer(randomId(), { debug: 1 });
+      peer.on('open', (id) => {
+        joinStatus.textContent = `Your ID: ${id}`;
+      });
+      peer.on('error', (err) => {
+        joinStatus.textContent = `Error: ${err.message}`;
+      });
+    }
+
+    function ensurePeer() {
+      if (peer) return;
+      if (role === 'host') {
+        startHostPeer();
+      } else {
+        startGuestPeer();
+      }
+    }
+
+    function broadcastLog(message) {
+      if (role !== 'host') return;
+      remoteConnections.forEach((conn) => {
+        if (conn.open) conn.send({ type: 'log', message });
+      });
     }
 
     function log(message) {
       const now = new Date().toLocaleTimeString();
       logArea.value += `[${now}] ${message}\n`;
       logArea.scrollTop = logArea.scrollHeight;
+      broadcastLog(message);
     }
 
-    function setConnected(state) {
-      connectBtn.disabled = state;
-      disconnectBtn.disabled = !state;
-      sendBtn.disabled = !state;
-      commandInput.disabled = !state;
+    function currentPreference() {
+      const selected = Array.from(preferenceRadios).find((r) => r.checked);
+      return selected ? selected.value : 'gumball';
+    }
+
+    function pickOutcome() {
+      const pref = currentPreference();
+      const roll = Math.random();
+      if (roll < 0.75) return pref;
+      if (roll < 0.9) return pref === 'gumball' ? 'jolly' : 'gumball';
+      return 'none';
+    }
+
+    function showOutcome(outcome) {
+      if (outcome === 'gumball') {
+        slotImage.src = 'assets/gumball.png';
+        slotImage.alt = 'Gumball';
+        slotImage.style.display = 'block';
+        slotNone.style.display = 'none';
+        slotLabel.textContent = 'Pulled: gumball';
+      } else if (outcome === 'jolly') {
+        slotImage.src = 'assets/jolly-rancher.png';
+        slotImage.alt = 'Jolly Rancher';
+        slotImage.style.display = 'block';
+        slotNone.style.display = 'none';
+        slotLabel.textContent = 'Pulled: Jolly Rancher';
+      } else {
+        slotImage.style.display = 'none';
+        slotNone.style.display = 'block';
+        slotLabel.textContent = 'Pulled: no candy';
+      }
     }
 
     async function startReading() {
-      // Accumulate text until we see a newline to avoid chopped/misspelled log lines.
       let buffer = '';
       readLoopActive = true;
       while (readLoopActive && reader) {
@@ -157,10 +423,15 @@
             if (!trimmed) continue;
             log(`micro:bit → ${trimmed}`);
             if (trimmed === 'BTN:A') {
-              const picked = chooseNumber();
-              const response = picked === 0 ? 'CHOICE 0' : 'CHOICE 1';
-              log(`Picked ${picked}; sending ${response}`);
-              sendRaw(response).catch((err) => log(`Auto-send failed: ${err.message}`));
+              const outcome = pickOutcome();
+              log(`Slot spin: pref=${currentPreference()}, outcome=${outcome}`);
+              showOutcome(outcome);
+              const message = outcome === 'gumball'
+                ? 'PAYOUT GUMBALL'
+                : outcome === 'jolly'
+                  ? 'PAYOUT JOLLY'
+                  : 'PAYOUT NONE';
+              await sendRaw(message);
             }
           }
         }
@@ -170,6 +441,10 @@
     async function connect() {
       if (!('serial' in navigator)) {
         log('Web Serial is not available in this browser. Try a recent version of Chrome, Edge, or Opera.');
+        return;
+      }
+      if (role !== 'host') {
+        log('Only the host can connect to the micro:bit. Switch role to Host.');
         return;
       }
       try {
@@ -184,7 +459,8 @@
         readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
         reader = textDecoder.readable.getReader();
 
-        setConnected(true);
+        connectBtn.disabled = true;
+        disconnectBtn.disabled = false;
         log('Connected to micro:bit serial port.');
         startReading().catch((err) => log(`Read error: ${err.message}`));
       } catch (err) {
@@ -194,7 +470,6 @@
 
     async function disconnect() {
       readLoopActive = false;
-      sendBtn.disabled = true;
       if (reader) {
         try {
           await reader.cancel();
@@ -228,10 +503,15 @@
         }
         port = null;
       }
-      setConnected(false);
+      connectBtn.disabled = role === 'guest';
+      disconnectBtn.disabled = true;
     }
 
     async function sendRaw(text) {
+      if (role === 'guest') {
+        log('Guests cannot send serial data; only hosts with the micro:bit attached may send.');
+        return;
+      }
       if (!writer) {
         log('Not connected.');
         return;
@@ -246,22 +526,45 @@
       }
     }
 
-    async function sendCommand() {
-      const command = commandInput.value.trim();
-      if (!command) return;
-      await sendRaw(command);
-      commandInput.value = '';
+    function handleRemoteData(_conn, data) {
+      if (data && data.type === 'log' && typeof data.message === 'string' && role === 'guest') {
+        log(`[host] ${data.message}`);
+      }
+    }
+
+    function connectToHost() {
+      const code = joinInput.value.trim();
+      if (!code) {
+        joinStatus.textContent = 'Enter a code first';
+        return;
+      }
+      ensurePeer();
+      joinStatus.textContent = 'Connecting...';
+      hostConnection = peer.connect(code);
+      hostConnection.on('open', () => {
+        joinStatus.textContent = `Connected to host ${code}`;
+      });
+      hostConnection.on('data', (data) => handleRemoteData(hostConnection, data));
+      hostConnection.on('close', () => {
+        joinStatus.textContent = 'Disconnected from host';
+      });
+      hostConnection.on('error', (err) => {
+        joinStatus.textContent = `Join error: ${err.message}`;
+      });
     }
 
     connectBtn.addEventListener('click', connect);
     disconnectBtn.addEventListener('click', disconnect);
-    sendBtn.addEventListener('click', sendCommand);
-    commandInput.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        sendCommand();
-      }
+    joinBtn.addEventListener('click', connectToHost);
+    roleSelect.addEventListener('change', (event) => {
+      role = event.target.value;
+      resetPeer();
+      updateRoleUI();
+      ensurePeer();
     });
+
+    updateRoleUI();
+    ensurePeer();
   </script>
 </body>
 </html>
