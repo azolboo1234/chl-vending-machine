@@ -13,8 +13,15 @@
     body {
       margin: 0;
       padding: 1.5rem;
-      max-width: 960px;
+      display: flex;
+      justify-content: center;
+      background: radial-gradient(circle at 50% 20%, rgba(255, 255, 255, 0.05), transparent 35%),
+        linear-gradient(180deg, rgba(0, 0, 0, 0.04), transparent 40%);
       line-height: 1.6;
+    }
+
+    .page {
+      width: min(1150px, 96vw);
     }
 
     header {
@@ -80,32 +87,60 @@
 
     .slot-panel {
       display: grid;
-      grid-template-columns: 200px 1fr;
-      gap: 1rem;
+      grid-template-columns: 320px 1fr;
+      gap: 1.25rem;
       align-items: stretch;
-      margin-top: 1rem;
+      margin: 1.25rem auto 0;
+      width: 100%;
+      max-width: 980px;
       border: 1px solid rgba(0, 0, 0, 0.12);
-      border-radius: 12px;
-      padding: 1rem;
+      border-radius: 14px;
+      padding: 1.25rem;
       background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.03));
+      box-shadow: 0 16px 46px rgba(0, 0, 0, 0.18);
     }
 
     .slot-window {
       position: relative;
       border: 2px solid #c7923e;
       background: linear-gradient(180deg, #1e1e1e, #2a2a2a);
-      border-radius: 10px;
-      height: 220px;
+      border-radius: 12px;
+      height: 280px;
       display: flex;
       align-items: center;
       justify-content: center;
       overflow: hidden;
-      box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.08);
+      box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.08), 0 10px 26px rgba(0, 0, 0, 0.35);
+    }
+
+    .slot-window.spinning img,
+    .slot-window.spinning .slot-none {
+      animation: roll 480ms ease-in-out infinite;
+      filter: blur(1px);
+      opacity: 0.9;
+    }
+
+    @keyframes roll {
+      0% {
+        transform: translateY(0);
+      }
+      20% {
+        transform: translateY(-14px);
+      }
+      50% {
+        transform: translateY(0);
+      }
+      70% {
+        transform: translateY(14px);
+      }
+      100% {
+        transform: translateY(0);
+      }
     }
 
     .slot-window img, .slot-window .slot-none {
-      width: 140px;
-      height: 140px;
+      width: 180px;
+      height: 180px;
       object-fit: contain;
       filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.35));
       transition: opacity 120ms ease;
@@ -187,6 +222,7 @@
   </style>
 </head>
 <body>
+  <div class="page">
   <header>
     <h1>Candy Slot Machine</h1>
     <p>Press button <strong>A</strong> on the micro:bit to spin a one-column candy slot. The browser weights the spin toward the chosen preference
@@ -215,7 +251,7 @@
       </label>
       <div id="host-code" class="pill">Join code: <code id="join-code">—</code></div>
       <div id="guest-join" class="row" style="display: none; align-items: center;">
-        <input id="join-input" type="text" placeholder="Enter join code" />
+        <input id="join-input" type="text" placeholder="Enter 4-digit join code" />
         <button id="join-btn">Join</button>
         <span id="join-status" class="hint"></span>
       </div>
@@ -259,6 +295,7 @@
     <h2>Log</h2>
     <textarea id="log" readonly>Click "Connect" to request access to the micro:bit serial port...\n</textarea>
   </section>
+  </div>
 
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <script>
@@ -272,6 +309,7 @@
     const joinInput = document.querySelector('#join-input');
     const joinBtn = document.querySelector('#join-btn');
     const joinStatus = document.querySelector('#join-status');
+    const slotWindow = document.querySelector('.slot-window');
     const slotImage = document.querySelector('#slot-image');
     const slotNone = document.querySelector('#slot-none');
     const slotLabel = document.querySelector('#slot-label');
@@ -289,6 +327,7 @@
     let peer;
     let hostConnection;
     const remoteConnections = new Map();
+    let spinInProgress = false;
 
     function resetPeer() {
       if (peer) {
@@ -318,15 +357,20 @@
       }
     }
 
-    function randomId() {
-      return `mb-${Math.random().toString(36).slice(2, 8)}`;
+    function hostJoinCode() {
+      return Math.floor(1000 + Math.random() * 9000).toString();
+    }
+
+    function guestId() {
+      return `guest-${Math.random().toString(36).slice(2, 8)}`;
     }
 
     function startHostPeer() {
-      peer = new Peer(randomId(), { debug: 1 });
-      peer.on('open', (id) => {
-        joinCodeLabel.textContent = id;
-        log(`Share this join code so others can watch the log: ${id}`);
+      const joinCode = hostJoinCode();
+      peer = new Peer(joinCode, { debug: 1 });
+      peer.on('open', () => {
+        joinCodeLabel.textContent = joinCode;
+        log(`Share this join code so others can watch the log: ${joinCode}`);
       });
       peer.on('connection', (conn) => {
         remoteConnections.set(conn.peer, conn);
@@ -341,7 +385,7 @@
     }
 
     function startGuestPeer() {
-      peer = new Peer(randomId(), { debug: 1 });
+      peer = new Peer(guestId(), { debug: 1 });
       peer.on('open', (id) => {
         joinStatus.textContent = `Your ID: ${id}`;
       });
@@ -386,6 +430,31 @@
       return 'none';
     }
 
+    function cycleOutcome(index) {
+      const items = ['gumball', 'jolly', 'none'];
+      return items[index % items.length];
+    }
+
+    async function animateSpin(finalOutcome) {
+      spinInProgress = true;
+      slotWindow.classList.add('spinning');
+      slotLabel.textContent = 'Spinning...';
+
+      let tick = 0;
+      const interval = setInterval(() => {
+        const next = cycleOutcome(tick++);
+        showOutcome(next);
+        slotLabel.textContent = 'Spinning...';
+      }, 140);
+
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      clearInterval(interval);
+      slotWindow.classList.remove('spinning');
+      showOutcome(finalOutcome);
+      spinInProgress = false;
+    }
+
     function showOutcome(outcome) {
       if (outcome === 'gumball') {
         slotImage.src = 'assets/gumball.png';
@@ -423,9 +492,13 @@
             if (!trimmed) continue;
             log(`micro:bit → ${trimmed}`);
             if (trimmed === 'BTN:A') {
+              if (spinInProgress) {
+                log('Spin already in progress, ignoring extra BTN:A');
+                continue;
+              }
               const outcome = pickOutcome();
               log(`Slot spin: pref=${currentPreference()}, outcome=${outcome}`);
-              showOutcome(outcome);
+              await animateSpin(outcome);
               const message = outcome === 'gumball'
                 ? 'PAYOUT GUMBALL'
                 : outcome === 'jolly'
@@ -536,6 +609,10 @@
       const code = joinInput.value.trim();
       if (!code) {
         joinStatus.textContent = 'Enter a code first';
+        return;
+      }
+      if (!/^\d{4}$/.test(code)) {
+        joinStatus.textContent = 'Use the 4-digit host code';
         return;
       }
       ensurePeer();
