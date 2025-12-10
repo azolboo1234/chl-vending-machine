@@ -5,7 +5,8 @@ import utime
 # Load this .py file directly in the Micro:bit Python Editor (no GitHub link needed).
 # Copy it from the Raw view so the editor does not wrap or alter characters.
 
-SERVO_PIN = pin1  # Hummingbird rotation servo on slot 1
+SERVO_PIN_1 = pin1  # Hummingbird rotation servo on slot 1
+SERVO_PIN_2 = pin2  # Hummingbird rotation servo on slot 2
 SERVO_PERIOD_US = 20000  # 50 Hz pulses
 
 # Hummingbird Bit servo slots expect pulses roughly in the 0.7–2.3 ms range.
@@ -14,46 +15,52 @@ SERVO_PULSE_CW = 2300
 SERVO_PULSE_STOP = 1500
 
 # Number of 20 ms pulses to send for a single spin and to stop afterward.
-SERVO_SPIN_CYCLES = 60  # ~1.2 s of motion
-SERVO_STOP_CYCLES = 6
+SERVO_SPIN_CYCLES = 250  # ~5 seconds of motion (250 * 20 ms)
+SERVO_STOP_CYCLES = 8
 
 
-def _pulse_servo(pulse_us, cycles):
+def _pulse_servo(pin, pulse_us, cycles):
     # Manually bit-bang servo pulses to keep timing precise on the Hummingbird
     # board. This avoids PWM drift that can happen with analog writes.
     gap = SERVO_PERIOD_US - pulse_us
     for _ in range(cycles):
-        SERVO_PIN.write_digital(1)
+        pin.write_digital(1)
         utime.sleep_us(pulse_us)
-        SERVO_PIN.write_digital(0)
+        pin.write_digital(0)
         utime.sleep_us(gap)
 
 
-# Ensure the servo is stopped at boot so it doesn't drift.
-_pulse_servo(SERVO_PULSE_STOP, SERVO_STOP_CYCLES)
+def _stop_servo(pin):
+    _pulse_servo(pin, SERVO_PULSE_STOP, SERVO_STOP_CYCLES)
 
 
-def spin_servo(clockwise):
+def spin_servo(pin, clockwise):
     # Continuous rotation: ~0.7 ms drives CCW, ~2.3 ms drives CW. The stop
-    # pulse is ~1.5 ms. Holding the pulse for ~1.2 s yields about one spin.
+    # pulse is ~1.5 ms. Holding the pulse for ~5 s yields a long spin.
     pulse = SERVO_PULSE_CW if clockwise else SERVO_PULSE_CCW
-    _pulse_servo(pulse, SERVO_SPIN_CYCLES)
-    _pulse_servo(SERVO_PULSE_STOP, SERVO_STOP_CYCLES)  # precise stop
+    _pulse_servo(pin, pulse, SERVO_SPIN_CYCLES)
+    _stop_servo(pin)  # precise stop
 
 
 def handle_payout(kind):
     if kind == "GUMBALL":
         display.show("G")
-        spin_servo(True)
+        spin_servo(SERVO_PIN_1, True)
         uart.write("PAYOUT:GUMBALL\n")
     elif kind == "JOLLY":
         display.show("J")
-        spin_servo(False)
+        spin_servo(SERVO_PIN_2, False)
         uart.write("PAYOUT:JOLLY\n")
     else:
         display.show(Image.NO)
-        _pulse_servo(SERVO_PULSE_STOP, SERVO_STOP_CYCLES)
+        _stop_servo(SERVO_PIN_1)
+        _stop_servo(SERVO_PIN_2)
         uart.write("PAYOUT:NONE\n")
+
+
+# Ensure the servos are stopped at boot so they don't drift.
+_stop_servo(SERVO_PIN_1)
+_stop_servo(SERVO_PIN_2)
 
 
 uart.init(baudrate=115200)
