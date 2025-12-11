@@ -23,7 +23,11 @@
     }
 
     .page {
-      width: min(1400px, 98vw);
+      width: min(1500px, 98vw);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
     }
 
     header {
@@ -102,33 +106,37 @@
 
     .slot-panel {
       display: grid;
-      grid-template-columns: minmax(580px, 64vw) minmax(320px, 1fr);
+      grid-template-columns: minmax(640px, 70vw) minmax(340px, 1fr);
       gap: 1.35rem;
-      align-items: stretch;
+      align-items: center;
+      justify-content: center;
       margin: 1.5rem auto 0;
       width: 100%;
-      max-width: 1380px;
+      max-width: 1450px;
       border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 16px;
-      padding: 1.35rem;
+      padding: 1.5rem 1.65rem;
       background: linear-gradient(145deg, rgba(34, 41, 58, 0.9), rgba(19, 23, 33, 0.95));
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.04);
     }
 
     .slot-window {
       --spin-dim: 0.25;
+      --tile-fade: 0.15;
       position: relative;
       border: 2px solid #c7923e;
       background: radial-gradient(circle at 50% 20%, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.22)),
         linear-gradient(180deg, #10131a, #1b222f);
       border-radius: 18px;
-      height: clamp(320px, 36vw, 420px);
+      height: clamp(320px, 38vw, 460px);
+      width: min(1150px, 90vw);
       display: flex;
       align-items: center;
       justify-content: center;
       overflow: hidden;
-      box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.08), 0 16px 36px rgba(0, 0, 0, 0.45);
+      box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.08), 0 20px 44px rgba(0, 0, 0, 0.5);
       isolation: isolate;
+      margin: 0 auto;
     }
 
     .slot-reel {
@@ -141,8 +149,8 @@
     }
 
     .slot-tile {
-      width: clamp(220px, 26vw, 320px);
-      height: clamp(220px, 26vw, 320px);
+      width: clamp(240px, 30vw, 340px);
+      height: clamp(240px, 30vw, 340px);
       display: grid;
       place-items: center;
       background: radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.25));
@@ -156,9 +164,10 @@
       width: 80%;
       height: 80%;
       object-fit: contain;
-      transition: opacity 160ms ease, transform 160ms ease;
+      transition: opacity 180ms ease, transform 180ms ease, filter 240ms ease;
       position: relative;
       z-index: 3;
+      filter: brightness(calc(1 - var(--tile-fade)));
     }
 
     .slot-none {
@@ -275,6 +284,11 @@
       filter: brightness(0.82) drop-shadow(0 10px 20px rgba(0, 0, 0, 0.35));
     }
 
+    .slot-window.spinning .slot-tile img,
+    .slot-window.spinning .slot-tile .slot-none {
+      filter: brightness(calc(0.4 - (var(--tile-fade) * 0.2)));
+    }
+
     .slot-window.spinning::after {
       opacity: 0.8;
     }
@@ -311,6 +325,7 @@
     <div class="row">
       <button id="connect">Connect micro:bit (Web Serial)</button>
       <button id="disconnect" disabled>Disconnect</button>
+      <div id="bypass" class="pill">Bypass: off</div>
     </div>
     <p class="hint">Use a Chromium-based browser with <code>navigator.serial</code>. Only the host computer with the micro:bit plugged in
       should connect; guests can still watch the log via the join code.</p>
@@ -388,9 +403,10 @@
     const slotWindow = document.querySelector('.slot-window');
     const slotReel = document.querySelector('#slot-reel');
     const slotLabel = document.querySelector('#slot-label');
+    const bypassBadge = document.querySelector('#bypass');
     const preferenceRadios = document.querySelectorAll('input[name="preference"]');
     const reelOrder = ['gumball', 'jolly', 'none'];
-    const tileStridePx = 260;
+    const tileStridePx = 300;
 
     let port;
     let reader;
@@ -405,6 +421,7 @@
     let hostConnection;
     const remoteConnections = new Map();
     let spinInProgress = false;
+    let bypassMicrobit = false;
 
     function resetPeer() {
       if (peer) {
@@ -494,6 +511,14 @@
       broadcastLog(message);
     }
 
+    function setBypass(enabled) {
+      bypassMicrobit = enabled;
+      bypassBadge.textContent = `Bypass: ${enabled ? 'on' : 'off'}`;
+      bypassBadge.style.background = enabled
+        ? 'linear-gradient(180deg, rgba(80, 204, 140, 0.3), rgba(40, 120, 80, 0.2))'
+        : 'linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02))';
+    }
+
     function currentPreference() {
       const selected = Array.from(preferenceRadios).find((r) => r.checked);
       return selected ? selected.value : 'gumball';
@@ -518,9 +543,9 @@
       tile.className = 'slot-tile';
       tile.dataset.outcome = outcome;
       if (outcome === 'none') {
-        const none = document.createElement('div');
-        none.className = 'slot-none';
-        none.textContent = 'No candy';
+        const none = document.createElement('img');
+        none.src = 'assets/no-candy.jpg';
+        none.alt = 'No candy';
         tile.appendChild(none);
       } else {
         const img = document.createElement('img');
@@ -605,8 +630,10 @@
 
       while (elapsed < total) {
         const spacing = spinSpacing(elapsed, accel, cruise, decel);
-        const dim = Math.min(0.8, 0.25 + (elapsed / total) * 0.55);
+        const dim = Math.min(0.9, 0.25 + (elapsed / total) * 0.65);
+        const fade = Math.min(0.85, 0.25 + (elapsed / total) * 0.7);
         slotWindow.style.setProperty('--spin-dim', dim.toFixed(2));
+        slotWindow.style.setProperty('--tile-fade', fade.toFixed(2));
 
         await wait(spacing);
         tick = (tick + 1) % sequence.length;
@@ -620,16 +647,38 @@
       const finalOffset = centeredPosition(finalIndex, stride);
       slotReel.style.transition = 'transform 520ms cubic-bezier(0.2, 0.8, 0.3, 1)';
       slotReel.style.transform = `translateX(${finalOffset}px)`;
-      slotWindow.style.setProperty('--spin-dim', 0.65);
+      slotWindow.style.setProperty('--spin-dim', 0.7);
       await wait(540);
 
       slotWindow.classList.remove('spinning');
       renderStaticOutcome(finalOutcome);
       slotWindow.classList.add('reveal');
       slotWindow.style.setProperty('--spin-dim', 0.25);
+      slotWindow.style.setProperty('--tile-fade', 0.15);
       await wait(420);
       slotWindow.classList.remove('reveal');
       spinInProgress = false;
+    }
+
+    async function triggerSpin(triggerSource) {
+      if (role === 'guest') {
+        log('Guests cannot spin; the host needs to run the slot.');
+        return;
+      }
+      if (spinInProgress) {
+        log('Spin already in progress.');
+        return;
+      }
+
+      const outcome = pickOutcome();
+      log(`Slot spin (${triggerSource}): pref=${currentPreference()}, outcome=${outcome}`);
+      await animateSpin(outcome);
+      const message = outcome === 'gumball'
+        ? 'PAYOUT GUMBALL'
+        : outcome === 'jolly'
+          ? 'PAYOUT JOLLY'
+          : 'PAYOUT NONE';
+      await sendRaw(message);
     }
 
     async function startReading() {
@@ -649,19 +698,7 @@
             if (!trimmed) continue;
             log(`micro:bit → ${trimmed}`);
             if (trimmed === 'BTN:A') {
-              if (spinInProgress) {
-                log('Spin already in progress, ignoring extra BTN:A');
-                continue;
-              }
-              const outcome = pickOutcome();
-              log(`Slot spin: pref=${currentPreference()}, outcome=${outcome}`);
-              await animateSpin(outcome);
-              const message = outcome === 'gumball'
-                ? 'PAYOUT GUMBALL'
-                : outcome === 'jolly'
-                  ? 'PAYOUT JOLLY'
-                  : 'PAYOUT NONE';
-              await sendRaw(message);
+              await triggerSpin('micro:bit BTN:A');
             }
           }
         }
@@ -742,12 +779,16 @@
         log('Guests cannot send serial data; only hosts with the micro:bit attached may send.');
         return;
       }
+      const command = text.trim();
+      if (!command) return;
       if (!writer) {
+        if (bypassMicrobit) {
+          log(`Bypass on → ${command}`);
+          return;
+        }
         log('Not connected.');
         return;
       }
-      const command = text.trim();
-      if (!command) return;
       try {
         await writer.write(`${command}\n`);
         log(`You → ${command}`);
@@ -797,8 +838,31 @@
       ensurePeer();
     });
 
+    document.addEventListener('keydown', (event) => {
+      if (event.key && event.key.toLowerCase() === 'a') {
+        const active = document.activeElement;
+        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT')) {
+          return;
+        }
+        triggerSpin('keyboard A');
+        return;
+      }
+      if (event.key && event.key.toLowerCase() === 'b') {
+        const active = document.activeElement;
+        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT')) {
+          return;
+        }
+        if (!bypassMicrobit) {
+          setBypass(true);
+          log('Bypass enabled via keyboard B: spins can run without a connected micro:bit.');
+        }
+      }
+    });
+
+    setBypass(false);
     renderStaticOutcome('gumball');
     slotWindow.style.setProperty('--spin-dim', 0.25);
+    slotWindow.style.setProperty('--tile-fade', 0.15);
     slotLabel.textContent = 'Waiting for button A...';
     updateRoleUI();
     ensurePeer();
