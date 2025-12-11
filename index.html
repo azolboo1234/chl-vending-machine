@@ -7,7 +7,7 @@
   <style>
     :root {
       color-scheme: light dark;
-      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      font-family: 'Inter', system-ui, -apple-system, "Segoe UI", sans-serif;
     }
 
     body {
@@ -15,13 +15,15 @@
       padding: 1.5rem;
       display: flex;
       justify-content: center;
-      background: radial-gradient(circle at 50% 20%, rgba(255, 255, 255, 0.05), transparent 35%),
-        linear-gradient(180deg, rgba(0, 0, 0, 0.04), transparent 40%);
+      background: radial-gradient(circle at 25% 20%, rgba(255, 255, 255, 0.08), transparent 35%),
+        radial-gradient(circle at 80% 10%, rgba(255, 220, 140, 0.12), transparent 40%),
+        linear-gradient(160deg, #0f1116, #141821 32%, #0f1219);
       line-height: 1.6;
+      color: #f7f8fb;
     }
 
     .page {
-      width: min(1150px, 96vw);
+      width: min(1220px, 96vw);
     }
 
     header {
@@ -30,20 +32,26 @@
 
     h1 {
       margin: 0 0 0.35rem;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      color: #f1f3ff;
     }
 
     button {
-      padding: 0.6rem 1rem;
-      border-radius: 6px;
-      border: 1px solid #888;
-      background: linear-gradient(180deg, #f6f6f6, #e0e0e0);
+      padding: 0.65rem 1.1rem;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: linear-gradient(180deg, #313c52, #212a3c);
+      color: #f7f8fb;
       cursor: pointer;
-      font-weight: 600;
+      font-weight: 700;
+      text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+      box-shadow: 0 14px 28px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04);
     }
 
     button:disabled {
       cursor: not-allowed;
-      opacity: 0.6;
+      opacity: 0.55;
     }
 
     textarea {
@@ -53,6 +61,10 @@
       border-radius: 8px;
       padding: 0.75rem;
       font-family: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      background: #0c0f16;
+      color: #d8e0ff;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.45);
     }
 
     .row {
@@ -66,58 +78,63 @@
     .pill {
       padding: 0.65rem 0.85rem;
       border-radius: 999px;
-      border: 1px solid #888;
-      background: rgba(0, 0, 0, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
       display: inline-flex;
       align-items: center;
       gap: 0.4rem;
-      font-weight: 600;
+      font-weight: 700;
+      color: #f7f8fb;
     }
 
     .hint {
-      font-size: 0.9rem;
-      opacity: 0.85;
+      font-size: 0.92rem;
+      opacity: 0.9;
+      color: #cbd5ff;
     }
 
     code {
-      background: rgba(0, 0, 0, 0.08);
+      background: rgba(255, 255, 255, 0.08);
       padding: 0.15rem 0.35rem;
       border-radius: 4px;
+      color: #ffe59a;
     }
 
     .slot-panel {
       display: grid;
-      grid-template-columns: 320px 1fr;
-      gap: 1.25rem;
+      grid-template-columns: 420px 1fr;
+      gap: 1.35rem;
       align-items: stretch;
-      margin: 1.25rem auto 0;
+      margin: 1.5rem auto 0;
       width: 100%;
-      max-width: 980px;
-      border: 1px solid rgba(0, 0, 0, 0.12);
-      border-radius: 14px;
-      padding: 1.25rem;
-      background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.03));
-      box-shadow: 0 16px 46px rgba(0, 0, 0, 0.18);
+      max-width: 1100px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
+      padding: 1.35rem;
+      background: linear-gradient(145deg, rgba(34, 41, 58, 0.9), rgba(19, 23, 33, 0.95));
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.04);
     }
 
     .slot-window {
       position: relative;
       border: 2px solid #c7923e;
-      background: linear-gradient(180deg, #1e1e1e, #2a2a2a);
-      border-radius: 12px;
-      height: 280px;
+      background: radial-gradient(circle at 50% 20%, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.22)),
+        linear-gradient(180deg, #10131a, #1b222f);
+      border-radius: 18px;
+      height: 320px;
       display: flex;
       align-items: center;
       justify-content: center;
       overflow: hidden;
-      box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.08), 0 10px 26px rgba(0, 0, 0, 0.35);
+      box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.08), 0 16px 36px rgba(0, 0, 0, 0.45);
+      isolation: isolate;
     }
 
     .slot-window.spinning img,
     .slot-window.spinning .slot-none {
-      animation: roll 480ms ease-in-out infinite;
-      filter: blur(1px);
-      opacity: 0.9;
+      animation: roll 420ms cubic-bezier(0.45, 0.02, 0.2, 0.9) infinite;
+      filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.35)) blur(0.4px);
+      opacity: 0.95;
     }
 
     @keyframes roll {
@@ -139,17 +156,19 @@
     }
 
     .slot-window img, .slot-window .slot-none {
-      width: 180px;
-      height: 180px;
+      width: 210px;
+      height: 210px;
       object-fit: contain;
-      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.35));
-      transition: opacity 120ms ease;
+      filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.45));
+      transition: opacity 160ms ease, transform 160ms ease;
+      position: relative;
+      z-index: 3;
     }
 
     .slot-none {
-      color: #f87171;
-      font-weight: 700;
-      font-size: 1.3rem;
+      color: #ff9ea8;
+      font-weight: 800;
+      font-size: 1.35rem;
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
@@ -160,9 +179,11 @@
       left: 0;
       width: 100%;
       text-align: center;
-      font-weight: 700;
-      color: #ffd166;
+      font-weight: 800;
+      color: #ffe59a;
       text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+      letter-spacing: 0.08em;
+      z-index: 5;
     }
 
     .options {
@@ -176,9 +197,10 @@
       align-items: center;
       gap: 0.65rem;
       padding: 0.5rem 0.65rem;
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      border-radius: 10px;
-      background: rgba(0, 0, 0, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.18));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
     }
 
     .option-card img {
@@ -188,7 +210,8 @@
     }
 
     .option-title {
-      font-weight: 700;
+      font-weight: 800;
+      color: #f7f8fb;
     }
 
     .join-wrap {
@@ -208,9 +231,11 @@
     .join-wrap input[type="text"], select {
       padding: 0.65rem;
       border-radius: 6px;
-      border: 1px solid #888;
+      border: 1px solid rgba(255, 255, 255, 0.22);
       font-size: 1rem;
       font-family: inherit;
+      background: rgba(255, 255, 255, 0.06);
+      color: #f7f8fb;
     }
 
     .slot-footer {
@@ -218,6 +243,43 @@
       gap: 0.75rem;
       align-items: center;
       flex-wrap: wrap;
+    }
+
+    .slot-window::before,
+    .slot-window::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .slot-window::before {
+      background: radial-gradient(circle at 50% 10%, rgba(255, 255, 255, 0.12), transparent 45%);
+      z-index: 1;
+    }
+
+    .slot-window::after {
+      background: linear-gradient(180deg, transparent 55%, rgba(0, 0, 0, 0.35));
+      z-index: 4;
+    }
+
+    .slot-window.reveal img,
+    .slot-window.reveal .slot-none {
+      animation: pop-in 360ms cubic-bezier(0.25, 1.35, 0.5, 1);
+    }
+
+    @keyframes pop-in {
+      0% {
+        transform: scale(0.9);
+        opacity: 0.4;
+      }
+      45% {
+        transform: scale(1.05);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1);
+      }
     }
   </style>
 </head>
@@ -314,6 +376,7 @@
     const slotNone = document.querySelector('#slot-none');
     const slotLabel = document.querySelector('#slot-label');
     const preferenceRadios = document.querySelectorAll('input[name="preference"]');
+    const reelOrder = ['gumball', 'jolly', 'none'];
 
     let port;
     let reader;
@@ -431,27 +494,57 @@
     }
 
     function cycleOutcome(index) {
-      const items = ['gumball', 'jolly', 'none'];
-      return items[index % items.length];
+      return reelOrder[index % reelOrder.length];
+    }
+
+    function lerp(a, b, t) {
+      return a + (b - a) * t;
+    }
+
+    function easeOutCubic(t) {
+      return 1 - Math.pow(1 - t, 3);
+    }
+
+    function wait(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    function spinSpacing(elapsed, accel, cruise, decel) {
+      if (elapsed < accel) {
+        const t = elapsed / accel;
+        return lerp(260, 110, easeOutCubic(t));
+      }
+      if (elapsed < accel + cruise) return 110;
+      const t = Math.min(1, (elapsed - accel - cruise) / decel);
+      return lerp(110, 420, easeOutCubic(t));
     }
 
     async function animateSpin(finalOutcome) {
       spinInProgress = true;
       slotWindow.classList.add('spinning');
+      slotWindow.classList.remove('reveal');
       slotLabel.textContent = 'Spinning...';
 
       let tick = 0;
-      const interval = setInterval(() => {
-        const next = cycleOutcome(tick++);
-        showOutcome(next);
+      const accel = 650;
+      const cruise = 900;
+      const decel = 1100;
+      let elapsed = 0;
+
+      while (elapsed < accel + cruise + decel) {
+        const spacing = spinSpacing(elapsed, accel, cruise, decel);
+        await wait(spacing);
+        tick += 1;
+        showOutcome(cycleOutcome(tick));
         slotLabel.textContent = 'Spinning...';
-      }, 140);
+        elapsed += spacing;
+      }
 
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      clearInterval(interval);
       slotWindow.classList.remove('spinning');
       showOutcome(finalOutcome);
+      slotWindow.classList.add('reveal');
+      await wait(420);
+      slotWindow.classList.remove('reveal');
       spinInProgress = false;
     }
 
