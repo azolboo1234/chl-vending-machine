@@ -23,7 +23,7 @@
     }
 
     .page {
-      width: min(1220px, 96vw);
+      width: min(1400px, 98vw);
     }
 
     header {
@@ -102,12 +102,12 @@
 
     .slot-panel {
       display: grid;
-      grid-template-columns: 420px 1fr;
+      grid-template-columns: minmax(580px, 64vw) minmax(320px, 1fr);
       gap: 1.35rem;
       align-items: stretch;
       margin: 1.5rem auto 0;
       width: 100%;
-      max-width: 1100px;
+      max-width: 1380px;
       border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 16px;
       padding: 1.35rem;
@@ -116,12 +116,13 @@
     }
 
     .slot-window {
+      --spin-dim: 0.25;
       position: relative;
       border: 2px solid #c7923e;
       background: radial-gradient(circle at 50% 20%, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.22)),
         linear-gradient(180deg, #10131a, #1b222f);
       border-radius: 18px;
-      height: 320px;
+      height: clamp(320px, 36vw, 420px);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -130,36 +131,31 @@
       isolation: isolate;
     }
 
-    .slot-window.spinning img,
-    .slot-window.spinning .slot-none {
-      animation: roll 420ms cubic-bezier(0.45, 0.02, 0.2, 0.9) infinite;
-      filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.35)) blur(0.4px);
-      opacity: 0.95;
+    .slot-reel {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      transform: translateX(0);
+      transition: transform 160ms ease;
+      filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.35));
     }
 
-    @keyframes roll {
-      0% {
-        transform: translateY(0);
-      }
-      20% {
-        transform: translateY(-14px);
-      }
-      50% {
-        transform: translateY(0);
-      }
-      70% {
-        transform: translateY(14px);
-      }
-      100% {
-        transform: translateY(0);
-      }
+    .slot-tile {
+      width: clamp(220px, 26vw, 320px);
+      height: clamp(220px, 26vw, 320px);
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.25));
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.25);
+      overflow: hidden;
     }
 
-    .slot-window img, .slot-window .slot-none {
-      width: 210px;
-      height: 210px;
+    .slot-tile img, .slot-tile .slot-none {
+      width: 80%;
+      height: 80%;
       object-fit: contain;
-      filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.45));
       transition: opacity 160ms ease, transform 160ms ease;
       position: relative;
       z-index: 3;
@@ -245,12 +241,23 @@
       flex-wrap: wrap;
     }
 
+    @media (max-width: 960px) {
+      .slot-panel {
+        grid-template-columns: 1fr;
+      }
+
+      .slot-window {
+        height: clamp(260px, 54vw, 380px);
+      }
+    }
+
     .slot-window::before,
     .slot-window::after {
       content: '';
       position: absolute;
       inset: 0;
       pointer-events: none;
+      transition: opacity 240ms ease, background 240ms ease;
     }
 
     .slot-window::before {
@@ -259,12 +266,20 @@
     }
 
     .slot-window::after {
-      background: linear-gradient(180deg, transparent 55%, rgba(0, 0, 0, 0.35));
+      background: linear-gradient(90deg, rgba(0, 0, 0, var(--spin-dim)), transparent 28%, transparent 72%, rgba(0, 0, 0, var(--spin-dim)));
       z-index: 4;
+      opacity: 0.45;
     }
 
-    .slot-window.reveal img,
-    .slot-window.reveal .slot-none {
+    .slot-window.spinning .slot-reel {
+      filter: brightness(0.82) drop-shadow(0 10px 20px rgba(0, 0, 0, 0.35));
+    }
+
+    .slot-window.spinning::after {
+      opacity: 0.8;
+    }
+
+    .slot-window.reveal .slot-tile {
       animation: pop-in 360ms cubic-bezier(0.25, 1.35, 0.5, 1);
     }
 
@@ -324,8 +339,7 @@
     <h2>Slot machine</h2>
     <div class="slot-panel">
       <div class="slot-window" aria-live="polite">
-        <img id="slot-image" src="assets/gumball.png" alt="Gumball" />
-        <div id="slot-none" class="slot-none" style="display: none;">No candy</div>
+        <div id="slot-reel" class="slot-reel"></div>
         <div id="slot-label" class="slot-label">Waiting for button A...</div>
       </div>
       <div class="options">
@@ -372,11 +386,11 @@
     const joinBtn = document.querySelector('#join-btn');
     const joinStatus = document.querySelector('#join-status');
     const slotWindow = document.querySelector('.slot-window');
-    const slotImage = document.querySelector('#slot-image');
-    const slotNone = document.querySelector('#slot-none');
+    const slotReel = document.querySelector('#slot-reel');
     const slotLabel = document.querySelector('#slot-label');
     const preferenceRadios = document.querySelectorAll('input[name="preference"]');
     const reelOrder = ['gumball', 'jolly', 'none'];
+    const tileStridePx = 260;
 
     let port;
     let reader;
@@ -493,8 +507,54 @@
       return 'none';
     }
 
-    function cycleOutcome(index) {
-      return reelOrder[index % reelOrder.length];
+    function outcomeLabel(outcome) {
+      if (outcome === 'gumball') return 'Pulled: gumball';
+      if (outcome === 'jolly') return 'Pulled: Jolly Rancher';
+      return 'Pulled: no candy';
+    }
+
+    function tileForOutcome(outcome) {
+      const tile = document.createElement('div');
+      tile.className = 'slot-tile';
+      tile.dataset.outcome = outcome;
+      if (outcome === 'none') {
+        const none = document.createElement('div');
+        none.className = 'slot-none';
+        none.textContent = 'No candy';
+        tile.appendChild(none);
+      } else {
+        const img = document.createElement('img');
+        img.src = outcome === 'gumball' ? 'assets/gumball.png' : 'assets/jolly-rancher.png';
+        img.alt = outcome === 'gumball' ? 'Gumball' : 'Jolly Rancher';
+        tile.appendChild(img);
+      }
+      return tile;
+    }
+
+    function renderStaticOutcome(outcome) {
+      slotReel.innerHTML = '';
+      slotReel.appendChild(tileForOutcome(outcome));
+      const sampleTile = slotReel.querySelector('.slot-tile');
+      const stride = sampleTile ? sampleTile.getBoundingClientRect().width + 14 : tileStridePx;
+      const offset = centeredPosition(0, stride);
+      slotReel.style.transform = `translateX(${offset}px)`;
+      slotLabel.textContent = outcomeLabel(outcome);
+    }
+
+    function buildReel(sequence) {
+      slotReel.innerHTML = '';
+      sequence.forEach((outcome) => {
+        slotReel.appendChild(tileForOutcome(outcome));
+      });
+      const sampleTile = slotReel.querySelector('.slot-tile');
+      const stride = sampleTile ? sampleTile.getBoundingClientRect().width + 14 : tileStridePx;
+      const offset = centeredPosition(0, stride);
+      slotReel.style.transform = `translateX(${offset}px)`;
+    }
+
+    function centeredPosition(tick, stride) {
+      const offset = (slotWindow.clientWidth - stride) / 2;
+      return offset - tick * stride;
     }
 
     function lerp(a, b, t) {
@@ -525,47 +585,51 @@
       slotWindow.classList.remove('reveal');
       slotLabel.textContent = 'Spinning...';
 
+      const sequence = [];
+      const baseLength = 24;
+      for (let i = 0; i < baseLength; i += 1) {
+        sequence.push(reelOrder[i % reelOrder.length]);
+      }
+      sequence.push(finalOutcome, finalOutcome);
+
+      buildReel(sequence);
+      const sampleTile = slotReel.querySelector('.slot-tile');
+      const stride = sampleTile ? sampleTile.getBoundingClientRect().width + 14 : tileStridePx;
+
       let tick = 0;
       const accel = 650;
       const cruise = 900;
       const decel = 1100;
+      const total = accel + cruise + decel;
       let elapsed = 0;
 
-      while (elapsed < accel + cruise + decel) {
+      while (elapsed < total) {
         const spacing = spinSpacing(elapsed, accel, cruise, decel);
+        const dim = Math.min(0.8, 0.25 + (elapsed / total) * 0.55);
+        slotWindow.style.setProperty('--spin-dim', dim.toFixed(2));
+
         await wait(spacing);
-        tick += 1;
-        showOutcome(cycleOutcome(tick));
-        slotLabel.textContent = 'Spinning...';
+        tick = (tick + 1) % sequence.length;
+        const offset = centeredPosition(tick, stride);
+        slotReel.style.transition = 'transform 160ms ease';
+        slotReel.style.transform = `translateX(${offset}px)`;
         elapsed += spacing;
       }
 
+      const finalIndex = sequence.lastIndexOf(finalOutcome);
+      const finalOffset = centeredPosition(finalIndex, stride);
+      slotReel.style.transition = 'transform 520ms cubic-bezier(0.2, 0.8, 0.3, 1)';
+      slotReel.style.transform = `translateX(${finalOffset}px)`;
+      slotWindow.style.setProperty('--spin-dim', 0.65);
+      await wait(540);
+
       slotWindow.classList.remove('spinning');
-      showOutcome(finalOutcome);
+      renderStaticOutcome(finalOutcome);
       slotWindow.classList.add('reveal');
+      slotWindow.style.setProperty('--spin-dim', 0.25);
       await wait(420);
       slotWindow.classList.remove('reveal');
       spinInProgress = false;
-    }
-
-    function showOutcome(outcome) {
-      if (outcome === 'gumball') {
-        slotImage.src = 'assets/gumball.png';
-        slotImage.alt = 'Gumball';
-        slotImage.style.display = 'block';
-        slotNone.style.display = 'none';
-        slotLabel.textContent = 'Pulled: gumball';
-      } else if (outcome === 'jolly') {
-        slotImage.src = 'assets/jolly-rancher.png';
-        slotImage.alt = 'Jolly Rancher';
-        slotImage.style.display = 'block';
-        slotNone.style.display = 'none';
-        slotLabel.textContent = 'Pulled: Jolly Rancher';
-      } else {
-        slotImage.style.display = 'none';
-        slotNone.style.display = 'block';
-        slotLabel.textContent = 'Pulled: no candy';
-      }
     }
 
     async function startReading() {
@@ -733,6 +797,9 @@
       ensurePeer();
     });
 
+    renderStaticOutcome('gumball');
+    slotWindow.style.setProperty('--spin-dim', 0.25);
+    slotLabel.textContent = 'Waiting for button A...';
     updateRoleUI();
     ensurePeer();
   </script>
