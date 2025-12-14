@@ -5,10 +5,10 @@ import utime
 # Load this .py file directly in the Micro:bit Python Editor (no GitHub link needed).
 # Copy it from the Raw view so the editor does not wrap or alter characters.
 
-SERVO_PIN_1 = pin1  # Hummingbird positional servo on slot 1
-SERVO_PIN_2 = pin2  # Hummingbird positional servo on slot 2
-SENSOR_PIN_1 = pin0  # Ultrasonic sensor on sensor slot 1
-SENSOR_PIN_2 = pin8  # Ultrasonic sensor on sensor slot 2
+SERVO_PIN_1 = pin1  # Hummingbird positional servo on servo slot 1
+SERVO_PIN_2 = pin2  # Hummingbird positional servo on servo slot 2
+SENSOR_PIN_1 = pin0  # Distance sensor on sensor slot 1
+SENSOR_PIN_2 = pin8  # Distance sensor on sensor slot 2
 SENSOR_PIN_3 = pin3  # Rotary dial on sensor slot 3
 SERVO_PERIOD_US = 20000  # 50 Hz pulses
 
@@ -18,7 +18,7 @@ SERVO_PULSE_MAX = 2400
 DIAL_LOW = 400
 DIAL_HIGH = 600
 
-# Adaptive ultrasonic detection
+# Adaptive distance-sensor detection
 SENSOR_TRIGGER_DELTA = 120  # Change needed from baseline to count as a hit
 SENSOR_RESET_DELTA = 70  # Change needed to fall back to idle
 BASELINE_BLEND = 0.9  # Exponential moving average for smoothing
@@ -136,12 +136,12 @@ while True:
 
     if triggered_1:
         display.show("1")
-        uart.write("ULTRA1\n")
-        uart.write("ULTRA1:VAL=" + str(val_1) + "\n")
+        uart.write("DIST1\n")
+        uart.write("DIST1:VAL=" + str(val_1) + "\n")
     if triggered_2:
         display.show("2")
-        uart.write("ULTRA2\n")
-        uart.write("ULTRA2:VAL=" + str(val_2) + "\n")
+        uart.write("DIST2\n")
+        uart.write("DIST2:VAL=" + str(val_2) + "\n")
 
     if dial_value < DIAL_LOW:
         if last_dial != "KITKAT":
