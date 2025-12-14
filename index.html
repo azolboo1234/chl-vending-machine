@@ -22,6 +22,10 @@
       color: #f7f8fb;
     }
 
+    .hidden-copy {
+      display: none !important;
+    }
+
     .page {
       width: min(1500px, 98vw);
       display: flex;
@@ -253,6 +257,7 @@
     .slot-window {
       --spin-dim: 0.25;
       --tile-fade: 0.15;
+      --spin-blur: 0;
       position: relative;
       border: 2px solid #c7923e;
       background: radial-gradient(circle at 50% 20%, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.22)),
@@ -267,6 +272,9 @@
       box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.08), 0 24px 48px rgba(0, 0, 0, 0.55);
       isolation: isolate;
       margin: 0 auto;
+      transition: transform 260ms ease;
+      will-change: transform, filter;
+      transform: translateZ(0);
     }
 
     .slot-window:not(.spinning):hover {
@@ -302,6 +310,8 @@
       transform: translateX(0);
       transition: transform 160ms ease;
       filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.35));
+      will-change: transform, filter, opacity;
+      transform: translateZ(0);
     }
 
     .slot-tile {
@@ -362,9 +372,55 @@
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
     }
 
+    .slot-actions {
+      display: flex;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-top: 0.8rem;
+      flex-wrap: wrap;
+    }
+
+    .slot-actions button {
+      font-size: 1.05rem;
+      padding: 0.8rem 1.35rem;
+      border-radius: 12px;
+      background: linear-gradient(180deg, #4a71ff, #2c3f88);
+      box-shadow: 0 14px 32px rgba(52, 92, 255, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      letter-spacing: 0.01em;
+    }
+
     .readout-text {
       font-weight: 700;
       letter-spacing: 0.02em;
+    }
+
+    .verify-banner {
+      margin-top: 0.5rem;
+      padding: 0.85rem 1rem;
+      border-radius: 12px;
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.4));
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #f8e6c2;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      transition: opacity 180ms ease, transform 180ms ease, background 220ms ease, color 220ms ease;
+    }
+
+    .verify-banner.inactive {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+
+    .verify-banner.armed {
+      background: linear-gradient(90deg, rgba(255, 193, 109, 0.18), rgba(255, 126, 87, 0.26));
+      color: #ffe8c5;
+      box-shadow: 0 12px 32px rgba(255, 132, 76, 0.35);
     }
 
     .accent-bar {
@@ -439,6 +495,80 @@
       color: #f7f8fb;
     }
 
+    .option-card input[type="radio"] {
+      accent-color: #8bc7ff;
+      width: 18px;
+      height: 18px;
+    }
+
+    .option-card.active {
+      border-color: rgba(255, 255, 255, 0.25);
+      box-shadow: 0 18px 32px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.22));
+    }
+
+    .pref-overlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.04), transparent 45%),
+        linear-gradient(180deg, rgba(8, 11, 18, 0.75), rgba(8, 10, 16, 0.92));
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding: clamp(0.75rem, 2vw, 1.5rem);
+      backdrop-filter: blur(6px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 180ms ease;
+      z-index: 20;
+    }
+
+    .pref-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .pref-panel {
+      width: min(1100px, 100%);
+      border-radius: 18px;
+      padding: clamp(1rem, 2vw, 1.5rem);
+      background: linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.3));
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      box-shadow: 0 26px 60px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    .pref-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.75rem;
+    }
+
+    .pref-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+
+    .pref-actions button {
+      padding: 0.75rem 1.15rem;
+      border-radius: 12px;
+      background: linear-gradient(180deg, #3bbf8b, #248f65);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: #f7f8fb;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      box-shadow: 0 12px 26px rgba(36, 143, 101, 0.35);
+    }
+
+    .pref-note {
+      font-weight: 700;
+      color: #c9d5ff;
+    }
+
     .join-wrap {
       display: flex;
       gap: 0.5rem;
@@ -461,6 +591,40 @@
       font-family: inherit;
       background: rgba(255, 255, 255, 0.06);
       color: #f7f8fb;
+    }
+
+    #share-section {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .code-contents {
+      transition: filter 160ms ease, opacity 160ms ease;
+    }
+
+    .code-overlay {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, rgba(7, 9, 14, 0.85), rgba(11, 14, 22, 0.9));
+      color: #e5e9ff;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      backdrop-filter: blur(4px);
+      z-index: 2;
+    }
+
+    .codes-hidden .code-contents {
+      filter: blur(14px) brightness(0.8);
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .codes-hidden .code-overlay {
+      display: flex;
     }
 
     .slot-footer {
@@ -493,6 +657,7 @@
       inset: 0;
       pointer-events: none;
       transition: opacity 240ms ease, background 240ms ease;
+      will-change: opacity, background;
     }
 
     .slot-window::before {
@@ -507,7 +672,9 @@
     }
 
     .slot-window.spinning .slot-reel {
-      filter: brightness(0.82) drop-shadow(0 10px 20px rgba(0, 0, 0, 0.35));
+      filter: brightness(0.9) drop-shadow(0 14px 28px rgba(0, 0, 0, 0.45))
+        blur(calc(var(--spin-blur) * 18px));
+      transition: transform 160ms ease, filter 220ms ease;
     }
 
     .slot-window.spinning .slot-tile img,
@@ -517,6 +684,10 @@
 
     .slot-window.spinning::after {
       opacity: 0.8;
+    }
+
+    .slot-window.spinning::before {
+      animation: shimmer 1.6s ease-in-out infinite;
     }
 
     .slot-window.reveal .slot-tile {
@@ -584,11 +755,26 @@
         transform: translateX(-30%) scale(1);
       }
     }
+
+    @keyframes shimmer {
+      0% {
+        opacity: 0.3;
+        transform: translateX(-40%);
+      }
+      50% {
+        opacity: 0.75;
+        transform: translateX(40%);
+      }
+      100% {
+        opacity: 0.3;
+        transform: translateX(-40%);
+      }
+    }
   </style>
 </head>
 <body>
   <div class="page">
-  <header>
+  <header class="hidden-copy">
     <h1>Candy Slot Machine</h1>
     <p>Press button <strong>A</strong> on the micro:bit to spin a one-column candy slot. The browser weights the spin toward the chosen preference
       (75% preferred candy, 15% the other option, 10% no candy), shows the pulled item, and sends the result back to the micro:bit
@@ -601,14 +787,14 @@
       <button id="disconnect" disabled>Disconnect</button>
       <div id="bypass" class="pill">Bypass: off</div>
     </div>
-    <p class="hint">Use a Chromium-based browser with <code>navigator.serial</code>. Only the host computer with the micro:bit plugged in
+    <p class="hint hidden-copy">Use a Chromium-based browser with <code>navigator.serial</code>. Only the host computer with the micro:bit plugged in
       should connect; guests can still watch the log via the join code.</p>
   </section>
 
-  <section>
-    <h2>Share this session</h2>
-    <p class="hint">Host on the machine with the micro:bit attached. Share the join code so others can watch the log in real time.</p>
-    <div class="row join-wrap">
+  <section id="share-section" class="codes-hidden">
+    <h2 class="hidden-copy">Share this session</h2>
+    <p class="hint hidden-copy">Host on the machine with the micro:bit attached. Share the join code so others can watch the log in real time.</p>
+    <div class="row join-wrap code-contents">
       <label class="select-wrap">Role
         <select id="role">
           <option value="host">Host (micro:bit plugged in)</option>
@@ -622,6 +808,7 @@
         <span id="join-status" class="hint"></span>
       </div>
     </div>
+    <div class="code-overlay hidden-copy">Codes hidden · press S to toggle visibility</div>
   </section>
 
   <section>
@@ -647,6 +834,12 @@
             <span></span><span></span><span></span>
           </div>
         </div>
+        <div id="verify-banner" class="verify-banner">
+          Insert a quarter to roll away.
+        </div>
+        <div class="slot-actions">
+          <button id="roll-btn">Roll the slot</button>
+        </div>
       </div>
     </div>
   </section>
@@ -655,30 +848,46 @@
     <h2>Log</h2>
     <textarea id="log" readonly>Click "Connect" to request access to the micro:bit serial port...\n</textarea>
   </section>
+  </div>
 
-  <section class="preferences">
-    <h2>Pick your candy weighting</h2>
-    <p class="hint">Preferences sit at the bottom so you can tweak the odds after every round. 75% for your pick, 15% for the other,
-      10% for no candy.</p>
-    <div class="options">
-      <div class="option-card">
-        <input type="radio" id="pref-gumball" name="preference" value="gumball" checked />
-        <img src="assets/gumball.png" alt="Gumball" />
+  <div id="pref-overlay" class="pref-overlay" aria-hidden="true">
+    <div class="pref-panel" role="dialog" aria-modal="true" aria-labelledby="pref-title">
+      <div class="pref-head">
         <div>
-          <div class="option-title">Prefer gumball (75% odds)</div>
-          <div class="hint">Otherwise 15% Jolly Rancher, 10% no candy.</div>
+          <h2 id="pref-title">Pick your candy before this roll</h2>
+          <div id="pref-note" class="pref-note">You must pick a preference before every spin.</div>
+        </div>
+        <div class="slot-actions" aria-hidden="true" style="margin: 0;">
+          <button id="pref-confirm" disabled>Lock in &amp; spin</button>
         </div>
       </div>
-      <div class="option-card">
-        <input type="radio" id="pref-jolly" name="preference" value="jolly" />
-        <img src="assets/jolly-rancher.png" alt="Jolly Rancher" />
-        <div>
-          <div class="option-title">Prefer Jolly Rancher (75% odds)</div>
-          <div class="hint">Otherwise 15% gumball, 10% no candy.</div>
-        </div>
+      <div class="options">
+        <label class="option-card" tabindex="0">
+          <input type="radio" id="pref-kitkat" name="preference" value="kitkat" />
+          <img src="assets/kitkat.png" alt="KitKat" />
+          <div>
+            <div class="option-title">Prefer KitKat (75% odds)</div>
+            <div class="hint">Otherwise 15% Jolly Rancher, 10% no candy.</div>
+          </div>
+        </label>
+        <label class="option-card" tabindex="0">
+          <input type="radio" id="pref-jolly" name="preference" value="jolly" />
+          <img src="assets/jolly-rancher.png" alt="Jolly Rancher" />
+          <div>
+            <div class="option-title">Prefer Jolly Rancher (75% odds)</div>
+            <div class="hint">Otherwise 15% KitKat, 10% no candy.</div>
+          </div>
+        </label>
+      </div>
+      <div class="pref-actions">
+        <button id="pref-cancel" type="button">Cancel</button>
+        <button id="pref-confirm-bottom" type="button" disabled>Lock in &amp; spin</button>
       </div>
     </div>
-  </section>
+  </div>
+
+  <div class="preferences hidden-copy" aria-hidden="true">
+    <p class="hint hidden-copy">Preferences now appear as a front-layer prompt whenever you roll so you can set the odds each time.</p>
   </div>
 
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
@@ -699,10 +908,21 @@
     const statusChip = document.querySelector('#status-chip');
     const statusChipText = document.querySelector('#status-chip-text');
     const statusText = document.querySelector('#status-text');
+    const verifyBanner = document.querySelector('#verify-banner');
     const bypassBadge = document.querySelector('#bypass');
     const preferenceRadios = document.querySelectorAll('input[name="preference"]');
-    const reelOrder = ['gumball', 'jolly', 'none'];
+    const prefOverlay = document.querySelector('#pref-overlay');
+    const prefConfirm = document.querySelector('#pref-confirm');
+    const prefConfirmBottom = document.querySelector('#pref-confirm-bottom');
+    const prefCancel = document.querySelector('#pref-cancel');
+    const prefNote = document.querySelector('#pref-note');
+    const rollBtn = document.querySelector('#roll-btn');
+    const shareSection = document.querySelector('#share-section');
+    const reelOrder = ['kitkat', 'jolly', 'none'];
     const tileStridePx = 300;
+    let cachedStride = null;
+    let resizeRaf = null;
+    let vendingMachineVerify = 0;
 
     let port;
     let reader;
@@ -718,6 +938,10 @@
     const remoteConnections = new Map();
     let spinInProgress = false;
     let bypassMicrobit = false;
+    let activePreference = null;
+    let pendingSpinSource = null;
+    let codesVisible = false;
+    const peerOptions = { host: '0.peerjs.com', secure: true, port: 443, path: '/', debug: 1 };
 
     function resetPeer() {
       if (peer) {
@@ -727,9 +951,23 @@
           log(`Peer cleanup error: ${err.message}`);
         }
       }
+      remoteConnections.forEach((conn) => {
+        try {
+          conn.close();
+        } catch (_) {
+          // ignore
+        }
+      });
+      remoteConnections.clear();
+      if (hostConnection) {
+        try {
+          hostConnection.close();
+        } catch (_) {
+          // ignore
+        }
+      }
       peer = null;
       hostConnection = null;
-      remoteConnections.clear();
       joinCodeLabel.textContent = '—';
       joinStatus.textContent = '';
     }
@@ -747,6 +985,7 @@
         disconnect();
         setStatus('idle', 'Guest view: connect with the join code to watch the log.');
       }
+      if (rollBtn) rollBtn.disabled = role === 'guest';
     }
 
     function hostJoinCode() {
@@ -759,7 +998,7 @@
 
     function startHostPeer() {
       const joinCode = hostJoinCode();
-      peer = new Peer(joinCode, { debug: 1 });
+      peer = new Peer(joinCode, peerOptions);
       peer.on('open', () => {
         joinCodeLabel.textContent = joinCode;
         log(`Share this join code so others can watch the log: ${joinCode}`);
@@ -767,6 +1006,7 @@
       peer.on('connection', (conn) => {
         remoteConnections.set(conn.peer, conn);
         log(`Remote joined: ${conn.peer}`);
+        conn.send({ type: 'log', message: 'Connected to host log feed.' });
         conn.on('data', (data) => handleRemoteData(conn, data));
         conn.on('close', () => {
           remoteConnections.delete(conn.peer);
@@ -777,7 +1017,7 @@
     }
 
     function startGuestPeer() {
-      peer = new Peer(guestId(), { debug: 1 });
+      peer = new Peer(guestId(), peerOptions);
       peer.on('open', (id) => {
         joinStatus.textContent = `Your ID: ${id}`;
       });
@@ -828,23 +1068,111 @@
         : 'linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02))';
     }
 
+    function updateVerifyBanner() {
+      if (!verifyBanner) return;
+      const busy = spinInProgress || prefOverlay.classList.contains('open');
+      verifyBanner.classList.toggle('inactive', busy);
+      if (busy) return;
+      if (vendingMachineVerify) {
+        verifyBanner.textContent = 'Pull the crank with care.';
+        verifyBanner.classList.add('armed');
+      } else {
+        verifyBanner.textContent = 'Insert a quarter to roll away.';
+        verifyBanner.classList.remove('armed');
+      }
+    }
+
+    function setVerifyState(value, reason) {
+      vendingMachineVerify = value ? 1 : 0;
+      updateVerifyBanner();
+      if (reason) {
+        log(`Verify ${vendingMachineVerify ? 'armed' : 'idle'} (${reason}).`);
+      }
+    }
+
+    function handleUltrasonicArm() {
+      setVerifyState(1, 'ultrasonic sensor 1');
+    }
+
+    async function handleUltrasonicCrank() {
+      if (!vendingMachineVerify) {
+        log('Crank detected without verification — ignoring.');
+        return;
+      }
+      setVerifyState(0, 'ultrasonic sensor 2');
+      await triggerSpin('ultrasonic sensor');
+    }
+
+    function applyCodeVisibility() {
+      if (!shareSection) return;
+      if (codesVisible) {
+        shareSection.classList.remove('codes-hidden');
+      } else {
+        shareSection.classList.add('codes-hidden');
+      }
+    }
+
+    function toggleCodesVisibility() {
+      codesVisible = !codesVisible;
+      applyCodeVisibility();
+      log(codesVisible ? 'Join codes shown.' : 'Join codes hidden.');
+    }
+
+    function clearPreference() {
+      activePreference = null;
+      preferenceRadios.forEach((r) => {
+        r.checked = false;
+        const card = r.closest('.option-card');
+        if (card) card.classList.remove('active');
+      });
+    }
+
+    function setPreference(value) {
+      activePreference = value;
+      preferenceRadios.forEach((r) => {
+        r.checked = r.value === value;
+        const card = r.closest('.option-card');
+        if (card) card.classList.toggle('active', r.value === value);
+      });
+      prefConfirm.disabled = false;
+      prefConfirmBottom.disabled = false;
+    }
+
     function currentPreference() {
-      const selected = Array.from(preferenceRadios).find((r) => r.checked);
-      return selected ? selected.value : 'gumball';
+      return activePreference;
     }
 
     function pickOutcome() {
       const pref = currentPreference();
+      if (!pref) return 'none';
       const roll = Math.random();
       if (roll < 0.75) return pref;
-      if (roll < 0.9) return pref === 'gumball' ? 'jolly' : 'gumball';
+      if (roll < 0.9) return pref === 'kitkat' ? 'jolly' : 'kitkat';
       return 'none';
     }
 
     function outcomeLabel(outcome) {
-      if (outcome === 'gumball') return 'Pulled: gumball';
+      if (outcome === 'kitkat') return 'Pulled: KitKat';
       if (outcome === 'jolly') return 'Pulled: Jolly Rancher';
       return 'Pulled: no candy';
+    }
+
+    function openPreferencePrompt(source) {
+      pendingSpinSource = source;
+      clearPreference();
+      prefNote.textContent = `Triggered by ${source}. Pick a preference for this roll.`;
+      prefConfirm.disabled = true;
+      prefConfirmBottom.disabled = true;
+      prefOverlay.classList.add('open');
+      prefOverlay.setAttribute('aria-hidden', 'false');
+      log(`Preference needed for ${source} — choose KitKat or Jolly to continue.`);
+      updateVerifyBanner();
+    }
+
+    function closePreferencePrompt() {
+      prefOverlay.classList.remove('open');
+      prefOverlay.setAttribute('aria-hidden', 'true');
+      updateVerifyBanner();
     }
 
     function tileForOutcome(outcome) {
@@ -858,18 +1186,25 @@
         tile.appendChild(none);
       } else {
         const img = document.createElement('img');
-        img.src = outcome === 'gumball' ? 'assets/gumball.png' : 'assets/jolly-rancher.png';
-        img.alt = outcome === 'gumball' ? 'Gumball' : 'Jolly Rancher';
+        img.src = outcome === 'kitkat' ? 'assets/kitkat.png' : 'assets/jolly-rancher.png';
+        img.alt = outcome === 'kitkat' ? 'KitKat' : 'Jolly Rancher';
         tile.appendChild(img);
       }
       return tile;
     }
 
+    function measureStride() {
+      if (cachedStride !== null) return cachedStride;
+      const sampleTile = slotReel.querySelector('.slot-tile');
+      cachedStride = sampleTile ? sampleTile.getBoundingClientRect().width + 14 : tileStridePx;
+      return cachedStride;
+    }
+
     function renderStaticOutcome(outcome) {
       slotReel.innerHTML = '';
       slotReel.appendChild(tileForOutcome(outcome));
-      const sampleTile = slotReel.querySelector('.slot-tile');
-      const stride = sampleTile ? sampleTile.getBoundingClientRect().width + 14 : tileStridePx;
+      cachedStride = null;
+      const stride = measureStride();
       const offset = centeredPosition(0, stride);
       slotReel.style.transform = `translateX(${offset}px)`;
       slotLabel.textContent = outcomeLabel(outcome);
@@ -880,8 +1215,8 @@
       sequence.forEach((outcome) => {
         slotReel.appendChild(tileForOutcome(outcome));
       });
-      const sampleTile = slotReel.querySelector('.slot-tile');
-      const stride = sampleTile ? sampleTile.getBoundingClientRect().width + 14 : tileStridePx;
+      cachedStride = null;
+      const stride = measureStride();
       const offset = centeredPosition(0, stride);
       slotReel.style.transform = `translateX(${offset}px)`;
     }
@@ -889,6 +1224,13 @@
     function centeredPosition(tick, stride) {
       const offset = (slotWindow.clientWidth - stride) / 2;
       return offset - tick * stride;
+    }
+
+    function refreshStaticOffset() {
+      if (spinInProgress) return;
+      const stride = measureStride();
+      const offset = centeredPosition(0, stride);
+      slotReel.style.transform = `translateX(${offset}px)`;
     }
 
     function lerp(a, b, t) {
@@ -900,73 +1242,125 @@
     }
 
     function wait(ms) {
-      return new Promise((resolve) => setTimeout(resolve, ms));
+      if (!('requestAnimationFrame' in window)) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+      return new Promise((resolve) => {
+        const start = performance.now();
+        function step(now) {
+          if (now - start >= ms) {
+            resolve();
+            return;
+          }
+          requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+      });
     }
 
     function spinSpacing(elapsed, accel, cruise, decel) {
       if (elapsed < accel) {
         const t = elapsed / accel;
-        return lerp(260, 110, easeOutCubic(t));
+        return lerp(300, 70, easeOutCubic(t));
       }
-      if (elapsed < accel + cruise) return 110;
+      if (elapsed < accel + cruise) {
+        const t = (elapsed - accel) / cruise;
+        return lerp(70, 95, t);
+      }
       const t = Math.min(1, (elapsed - accel - cruise) / decel);
-      return lerp(110, 420, easeOutCubic(t));
+      return lerp(95, 520, easeOutCubic(t));
     }
 
     async function animateSpin(finalOutcome) {
       spinInProgress = true;
+      updateVerifyBanner();
       slotWindow.classList.add('spinning');
       slotWindow.classList.remove('reveal');
       slotLabel.textContent = 'Spinning...';
+      const reelStyle = slotReel.style;
+      const windowStyle = slotWindow.style;
+      windowStyle.setProperty('--spin-blur', 0.9);
+      windowStyle.setProperty('--spin-dim', 0.4);
+      windowStyle.setProperty('--tile-fade', 0.35);
 
       const sequence = [];
-      const baseLength = 24;
+      const baseLength = 32;
       for (let i = 0; i < baseLength; i += 1) {
         sequence.push(reelOrder[i % reelOrder.length]);
       }
       sequence.push(finalOutcome, finalOutcome);
 
       buildReel(sequence);
-      const sampleTile = slotReel.querySelector('.slot-tile');
-      const stride = sampleTile ? sampleTile.getBoundingClientRect().width + 14 : tileStridePx;
+      cachedStride = null;
+      const stride = measureStride();
 
       let tick = 0;
-      const accel = 650;
-      const cruise = 900;
-      const decel = 1100;
+      const accel = 820;
+      const cruise = 1200;
+      const decel = 1500;
       const total = accel + cruise + decel;
       let elapsed = 0;
 
       while (elapsed < total) {
         const spacing = spinSpacing(elapsed, accel, cruise, decel);
-        const dim = Math.min(0.9, 0.25 + (elapsed / total) * 0.65);
-        const fade = Math.min(0.85, 0.25 + (elapsed / total) * 0.7);
-        slotWindow.style.setProperty('--spin-dim', dim.toFixed(2));
-        slotWindow.style.setProperty('--tile-fade', fade.toFixed(2));
+        const phase = Math.min(1, elapsed / total);
+        const dim = Math.min(0.92, 0.28 + Math.pow(phase, 1.2) * 0.75);
+        const fade = Math.min(0.9, 0.22 + phase * 0.7);
+        const blur = Math.max(0, 0.95 - phase * 1.05);
+        windowStyle.setProperty('--spin-dim', dim.toFixed(2));
+        windowStyle.setProperty('--tile-fade', fade.toFixed(2));
+        windowStyle.setProperty('--spin-blur', blur.toFixed(2));
 
         await wait(spacing);
         tick = (tick + 1) % sequence.length;
         const offset = centeredPosition(tick, stride);
-        slotReel.style.transition = 'transform 160ms ease';
-        slotReel.style.transform = `translateX(${offset}px)`;
+        reelStyle.transition = `transform ${Math.max(140, Math.min(320, spacing * 0.7))}ms cubic-bezier(0.2, 0.8, 0.3, 1)`;
+        reelStyle.transform = `translateX(${offset}px)`;
         elapsed += spacing;
       }
 
       const finalIndex = sequence.lastIndexOf(finalOutcome);
+      const previewOffset = centeredPosition(Math.max(0, finalIndex - 1), stride);
       const finalOffset = centeredPosition(finalIndex, stride);
-      slotReel.style.transition = 'transform 520ms cubic-bezier(0.2, 0.8, 0.3, 1)';
-      slotReel.style.transform = `translateX(${finalOffset}px)`;
-      slotWindow.style.setProperty('--spin-dim', 0.7);
-      await wait(540);
+      reelStyle.transition = 'transform 520ms cubic-bezier(0.16, 0.85, 0.3, 1)';
+      reelStyle.transform = `translateX(${previewOffset}px)`;
+      windowStyle.setProperty('--spin-dim', 0.82);
+      windowStyle.setProperty('--spin-blur', 0.2);
+      await wait(420);
+      reelStyle.transition = 'transform 640ms cubic-bezier(0.15, 0.95, 0.24, 1.05)';
+      reelStyle.transform = `translateX(${finalOffset}px)`;
+      windowStyle.setProperty('--spin-dim', 0.9);
+      await wait(620);
 
       slotWindow.classList.remove('spinning');
       renderStaticOutcome(finalOutcome);
       slotWindow.classList.add('reveal');
-      slotWindow.style.setProperty('--spin-dim', 0.25);
-      slotWindow.style.setProperty('--tile-fade', 0.15);
+      windowStyle.setProperty('--spin-dim', 0.25);
+      windowStyle.setProperty('--tile-fade', 0.12);
+      windowStyle.setProperty('--spin-blur', 0);
       await wait(420);
       slotWindow.classList.remove('reveal');
       spinInProgress = false;
+      updateVerifyBanner();
+    }
+
+    async function runSpin(triggerSource) {
+      if (!currentPreference()) {
+        log('Pick a preference first.');
+        return;
+      }
+      const outcome = pickOutcome();
+      log(`Slot spin (${triggerSource}): pref=${currentPreference()}, outcome=${outcome}`);
+      setStatus('spin', `Spinning via ${triggerSource}...`);
+      await animateSpin(outcome);
+      const message = outcome === 'kitkat'
+        ? 'PAYOUT KITKAT'
+        : outcome === 'jolly'
+          ? 'PAYOUT JOLLY'
+          : 'PAYOUT NONE';
+      await sendRaw(message);
+      setStatus('ok', 'Spin finished—result sent to the micro:bit.');
+      clearPreference();
     }
 
     async function triggerSpin(triggerSource) {
@@ -978,18 +1372,16 @@
         log('Spin already in progress.');
         return;
       }
+      if (pendingSpinSource) {
+        log('Finish choosing a preference for the queued spin.');
+        return;
+      }
+      if (!currentPreference()) {
+        openPreferencePrompt(triggerSource);
+        return;
+      }
 
-      const outcome = pickOutcome();
-      log(`Slot spin (${triggerSource}): pref=${currentPreference()}, outcome=${outcome}`);
-      setStatus('spin', `Spinning via ${triggerSource}...`);
-      await animateSpin(outcome);
-      const message = outcome === 'gumball'
-        ? 'PAYOUT GUMBALL'
-        : outcome === 'jolly'
-          ? 'PAYOUT JOLLY'
-          : 'PAYOUT NONE';
-      await sendRaw(message);
-      setStatus('ok', 'Spin finished—result sent to the micro:bit.');
+      await runSpin(triggerSource);
     }
 
     async function startReading() {
@@ -1010,6 +1402,12 @@
             log(`micro:bit → ${trimmed}`);
             if (trimmed === 'BTN:A') {
               await triggerSpin('micro:bit BTN:A');
+            } else if (trimmed === 'VERIFY:1' || trimmed === 'ULTRA1') {
+              handleUltrasonicArm();
+            } else if (trimmed === 'VERIFY:0') {
+              setVerifyState(0, 'micro:bit reset');
+            } else if (trimmed === 'CRANK' || trimmed === 'ULTRA2') {
+              await handleUltrasonicCrank();
             }
           }
         }
@@ -1043,6 +1441,10 @@
         disconnectBtn.disabled = false;
         log('Connected to micro:bit serial port.');
         setStatus('ok', 'Connected. Press A on the micro:bit or keyboard to spin.');
+        setVerifyState(0, 'connected');
+        if (writer) {
+          await writer.write('VERIFY RESET\n');
+        }
         startReading().catch((err) => log(`Read error: ${err.message}`));
       } catch (err) {
         log(`Connection failed: ${err.message}`);
@@ -1088,6 +1490,7 @@
       connectBtn.disabled = role === 'guest';
       disconnectBtn.disabled = true;
       setStatus('idle', 'Disconnected. Connect the micro:bit, then press A to spin.');
+      setVerifyState(0, 'disconnected');
     }
 
     async function sendRaw(text) {
@@ -1148,13 +1551,52 @@
       });
     }
 
+    function commitPreferenceAndSpin() {
+      if (!currentPreference()) {
+        prefNote.textContent = 'Pick a preference to continue.';
+        return;
+      }
+      const source = pendingSpinSource || 'roll';
+      pendingSpinSource = null;
+      closePreferencePrompt();
+      runSpin(source);
+    }
+
+    preferenceRadios.forEach((radio) => {
+      radio.addEventListener('change', () => setPreference(radio.value));
+      const card = radio.closest('.option-card');
+      if (card) {
+        card.addEventListener('click', () => setPreference(radio.value));
+        card.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            radio.checked = true;
+            setPreference(radio.value);
+          }
+        });
+      }
+    });
+
+    prefConfirm.addEventListener('click', commitPreferenceAndSpin);
+    prefConfirmBottom.addEventListener('click', commitPreferenceAndSpin);
+    prefCancel.addEventListener('click', () => {
+      pendingSpinSource = null;
+      clearPreference();
+      closePreferencePrompt();
+      log('Spin canceled before choosing a preference.');
+    });
+
     connectBtn.addEventListener('click', connect);
     disconnectBtn.addEventListener('click', disconnect);
     joinBtn.addEventListener('click', connectToHost);
+    rollBtn.addEventListener('click', () => triggerSpin('roll button'));
     roleSelect.addEventListener('change', (event) => {
       role = event.target.value;
       resetPeer();
       updateRoleUI();
+      pendingSpinSource = null;
+      closePreferencePrompt();
+      clearPreference();
       ensurePeer();
     });
 
@@ -1176,16 +1618,35 @@
           setBypass(true);
           log('Bypass enabled via keyboard B: spins can run without a connected micro:bit.');
         }
+        return;
+      }
+      if (event.key && event.key.toLowerCase() === 's') {
+        const active = document.activeElement;
+        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT')) {
+          return;
+        }
+        toggleCodesVisibility();
       }
     });
 
+    window.addEventListener('resize', () => {
+      cachedStride = null;
+      if (resizeRaf) cancelAnimationFrame(resizeRaf);
+      resizeRaf = requestAnimationFrame(() => {
+        refreshStaticOffset();
+        resizeRaf = null;
+      });
+    });
+
+    applyCodeVisibility();
     setBypass(false);
-    renderStaticOutcome('gumball');
+    renderStaticOutcome('kitkat');
     slotWindow.style.setProperty('--spin-dim', 0.25);
     slotWindow.style.setProperty('--tile-fade', 0.15);
     slotLabel.textContent = 'Waiting for button A...';
     setStatus('idle', 'Press button A on the micro:bit or tap A on the keyboard to roll.');
     updateRoleUI();
+    updateVerifyBanner();
     ensurePeer();
   </script>
 </body>
