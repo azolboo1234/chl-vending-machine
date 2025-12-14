@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Candy Slot Machine · micro:bit + Hummingbird</title>
+  <title>Candy Vending Machine · micro:bit + Hummingbird</title>
   <style>
     :root {
       color-scheme: light dark;
@@ -395,34 +395,6 @@
       letter-spacing: 0.02em;
     }
 
-    .verify-banner {
-      margin-top: 0.5rem;
-      padding: 0.85rem 1rem;
-      border-radius: 12px;
-      background: linear-gradient(90deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.4));
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-weight: 800;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      color: #f8e6c2;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
-      transition: opacity 180ms ease, transform 180ms ease, background 220ms ease, color 220ms ease;
-    }
-
-    .verify-banner.inactive {
-      opacity: 0;
-      transform: translateY(-6px);
-    }
-
-    .verify-banner.armed {
-      background: linear-gradient(90deg, rgba(255, 193, 109, 0.18), rgba(255, 126, 87, 0.26));
-      color: #ffe8c5;
-      box-shadow: 0 12px 32px rgba(255, 132, 76, 0.35);
-    }
-
     .accent-bar {
       display: flex;
       gap: 6px;
@@ -775,8 +747,8 @@
 <body>
   <div class="page">
   <header class="hidden-copy">
-    <h1>Candy Slot Machine</h1>
-    <p>Press button <strong>A</strong> on the micro:bit to spin a one-column candy slot. The browser weights the spin toward the chosen preference
+    <h1>Candy Vending Machine</h1>
+    <p>Press button <strong>A</strong> on the micro:bit to spin a one-column candy vending machine. The browser weights the spin toward the chosen preference
       (75% preferred candy, 15% the other option, 10% no candy), shows the pulled item, and sends the result back to the micro:bit
       so the Hummingbird can react.</p>
   </header>
@@ -812,7 +784,7 @@
   </section>
 
   <section>
-    <h2>Slot machine</h2>
+    <h2>Vending machine</h2>
     <div class="slot-panel">
       <div class="slot-shell">
         <div class="slot-topline">
@@ -829,16 +801,13 @@
           <div id="slot-label" class="slot-label">Waiting for button A...</div>
         </div>
         <div class="slot-readout">
-          <div id="status-text" class="readout-text">Press button A on the micro:bit or tap the A key to roll the slot.</div>
+          <div id="status-text" class="readout-text">Press button A on the micro:bit or tap the A key to spin the vending machine.</div>
           <div class="accent-bar" aria-hidden="true">
             <span></span><span></span><span></span>
           </div>
         </div>
-        <div id="verify-banner" class="verify-banner">
-          Insert a quarter to roll away.
-        </div>
         <div class="slot-actions">
-          <button id="roll-btn">Roll the slot</button>
+          <button id="roll-btn">Spin the vending machine</button>
         </div>
       </div>
     </div>
@@ -908,7 +877,6 @@
     const statusChip = document.querySelector('#status-chip');
     const statusChipText = document.querySelector('#status-chip-text');
     const statusText = document.querySelector('#status-text');
-    const verifyBanner = document.querySelector('#verify-banner');
     const bypassBadge = document.querySelector('#bypass');
     const preferenceRadios = document.querySelectorAll('input[name="preference"]');
     const prefOverlay = document.querySelector('#pref-overlay');
@@ -922,7 +890,6 @@
     const tileStridePx = 300;
     let cachedStride = null;
     let resizeRaf = null;
-    let vendingMachineVerify = 0;
 
     let port;
     let reader;
@@ -940,7 +907,10 @@
     let bypassMicrobit = false;
     let activePreference = null;
     let pendingSpinSource = null;
+    let prefAutoSpin = true;
+    let preferencePrimed = false;
     let codesVisible = false;
+    let lastDialPreference = null;
     const peerOptions = { host: '0.peerjs.com', secure: true, port: 443, path: '/', debug: 1 };
 
     function resetPeer() {
@@ -1068,41 +1038,6 @@
         : 'linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02))';
     }
 
-    function updateVerifyBanner() {
-      if (!verifyBanner) return;
-      const busy = spinInProgress || prefOverlay.classList.contains('open');
-      verifyBanner.classList.toggle('inactive', busy);
-      if (busy) return;
-      if (vendingMachineVerify) {
-        verifyBanner.textContent = 'Pull the crank with care.';
-        verifyBanner.classList.add('armed');
-      } else {
-        verifyBanner.textContent = 'Insert a quarter to roll away.';
-        verifyBanner.classList.remove('armed');
-      }
-    }
-
-    function setVerifyState(value, reason) {
-      vendingMachineVerify = value ? 1 : 0;
-      updateVerifyBanner();
-      if (reason) {
-        log(`Verify ${vendingMachineVerify ? 'armed' : 'idle'} (${reason}).`);
-      }
-    }
-
-    function handleUltrasonicArm() {
-      setVerifyState(1, 'ultrasonic sensor 1');
-    }
-
-    async function handleUltrasonicCrank() {
-      if (!vendingMachineVerify) {
-        log('Crank detected without verification — ignoring.');
-        return;
-      }
-      setVerifyState(0, 'ultrasonic sensor 2');
-      await triggerSpin('ultrasonic sensor');
-    }
-
     function applyCodeVisibility() {
       if (!shareSection) return;
       if (codesVisible) {
@@ -1118,8 +1053,21 @@
       log(codesVisible ? 'Join codes shown.' : 'Join codes hidden.');
     }
 
+    async function handleUltrasonicTrigger(source) {
+      if (source === 'sensor 2') {
+        log('Ultrasonic sensor 2 opened the preference picker. Use the rotary dial to choose before rolling.');
+        openPreferencePrompt('ultrasonic sensor 2', { autoSpin: false, primeOnly: true });
+        return;
+      }
+      if (source === 'sensor 1') {
+        log('Ultrasonic sensor 1 requested a roll.');
+        await triggerSpin('ultrasonic 1');
+      }
+    }
+
     function clearPreference() {
       activePreference = null;
+      lastDialPreference = null;
       preferenceRadios.forEach((r) => {
         r.checked = false;
         const card = r.closest('.option-card');
@@ -1142,6 +1090,19 @@
       return activePreference;
     }
 
+    function applyDialPreference(rawValue) {
+      const normalized = rawValue === 'JOLLY' ? 'jolly' : 'kitkat';
+      if (normalized === lastDialPreference) return;
+      lastDialPreference = normalized;
+      setPreference(normalized);
+      if (prefOverlay.classList.contains('open')) {
+        prefNote.textContent = `Rotary dial picked ${normalized === 'kitkat' ? 'KitKat' : 'Jolly Rancher'}.`;
+        commitPreferenceAndSpin();
+      } else {
+        log(`Rotary dial set preference to ${normalized === 'kitkat' ? 'KitKat' : 'Jolly Rancher'}.`);
+      }
+    }
+
     function pickOutcome() {
       const pref = currentPreference();
       if (!pref) return 'none';
@@ -1157,8 +1118,13 @@
       return 'Pulled: no candy';
     }
 
-    function openPreferencePrompt(source) {
+    function openPreferencePrompt(source, options = {}) {
+      const { autoSpin = true, primeOnly = false } = options;
       pendingSpinSource = source;
+      prefAutoSpin = autoSpin;
+      if (primeOnly) {
+        preferencePrimed = true;
+      }
       clearPreference();
       prefNote.textContent = `Triggered by ${source}. Pick a preference for this roll.`;
       prefConfirm.disabled = true;
@@ -1166,13 +1132,11 @@
       prefOverlay.classList.add('open');
       prefOverlay.setAttribute('aria-hidden', 'false');
       log(`Preference needed for ${source} — choose KitKat or Jolly to continue.`);
-      updateVerifyBanner();
     }
 
     function closePreferencePrompt() {
       prefOverlay.classList.remove('open');
       prefOverlay.setAttribute('aria-hidden', 'true');
-      updateVerifyBanner();
     }
 
     function tileForOutcome(outcome) {
@@ -1259,21 +1223,23 @@
     }
 
     function spinSpacing(elapsed, accel, cruise, decel) {
+      const start = 55;
+      const mid = 150;
+      const settle = 680;
       if (elapsed < accel) {
         const t = elapsed / accel;
-        return lerp(300, 70, easeOutCubic(t));
+        return lerp(start, mid, easeOutCubic(t));
       }
       if (elapsed < accel + cruise) {
         const t = (elapsed - accel) / cruise;
-        return lerp(70, 95, t);
+        return lerp(mid, mid * 1.1, t);
       }
       const t = Math.min(1, (elapsed - accel - cruise) / decel);
-      return lerp(95, 520, easeOutCubic(t));
+      return lerp(mid * 1.05, settle, easeOutCubic(t));
     }
 
     async function animateSpin(finalOutcome) {
       spinInProgress = true;
-      updateVerifyBanner();
       slotWindow.classList.add('spinning');
       slotWindow.classList.remove('reveal');
       slotLabel.textContent = 'Spinning...';
@@ -1295,9 +1261,9 @@
       const stride = measureStride();
 
       let tick = 0;
-      const accel = 820;
+      const accel = 620;
       const cruise = 1200;
-      const decel = 1500;
+      const decel = 1800;
       const total = accel + cruise + decel;
       let elapsed = 0;
 
@@ -1341,7 +1307,6 @@
       await wait(420);
       slotWindow.classList.remove('reveal');
       spinInProgress = false;
-      updateVerifyBanner();
     }
 
     async function runSpin(triggerSource) {
@@ -1350,7 +1315,7 @@
         return;
       }
       const outcome = pickOutcome();
-      log(`Slot spin (${triggerSource}): pref=${currentPreference()}, outcome=${outcome}`);
+      log(`Vending spin (${triggerSource}): pref=${currentPreference()}, outcome=${outcome}`);
       setStatus('spin', `Spinning via ${triggerSource}...`);
       await animateSpin(outcome);
       const message = outcome === 'kitkat'
@@ -1360,12 +1325,19 @@
           : 'PAYOUT NONE';
       await sendRaw(message);
       setStatus('ok', 'Spin finished—result sent to the micro:bit.');
+      preferencePrimed = false;
       clearPreference();
     }
 
     async function triggerSpin(triggerSource) {
       if (role === 'guest') {
-        log('Guests cannot spin; the host needs to run the slot.');
+        log('Guests cannot spin; the host needs to run the vending machine.');
+        return;
+      }
+      const isUltrasonic1 = typeof triggerSource === 'string' && triggerSource.toLowerCase().includes('ultrasonic 1');
+      if (isUltrasonic1 && !preferencePrimed) {
+        log('Ultrasonic sensor 1 tried to roll, but sensor 2 must open the preference prompt first.');
+        openPreferencePrompt('ultrasonic sensor 2', { autoSpin: false, primeOnly: true });
         return;
       }
       if (spinInProgress) {
@@ -1377,7 +1349,7 @@
         return;
       }
       if (!currentPreference()) {
-        openPreferencePrompt(triggerSource);
+        openPreferencePrompt(triggerSource, { autoSpin: true });
         return;
       }
 
@@ -1402,12 +1374,12 @@
             log(`micro:bit → ${trimmed}`);
             if (trimmed === 'BTN:A') {
               await triggerSpin('micro:bit BTN:A');
-            } else if (trimmed === 'VERIFY:1' || trimmed === 'ULTRA1') {
-              handleUltrasonicArm();
-            } else if (trimmed === 'VERIFY:0') {
-              setVerifyState(0, 'micro:bit reset');
-            } else if (trimmed === 'CRANK' || trimmed === 'ULTRA2') {
-              await handleUltrasonicCrank();
+            } else if (trimmed === 'ULTRA1') {
+              await handleUltrasonicTrigger('sensor 1');
+            } else if (trimmed === 'ULTRA2') {
+              await handleUltrasonicTrigger('sensor 2');
+            } else if (trimmed.indexOf('DIAL:') === 0) {
+              applyDialPreference(trimmed.split(':')[1] || '');
             }
           }
         }
@@ -1441,11 +1413,10 @@
         disconnectBtn.disabled = false;
         log('Connected to micro:bit serial port.');
         setStatus('ok', 'Connected. Press A on the micro:bit or keyboard to spin.');
-        setVerifyState(0, 'connected');
-        if (writer) {
-          await writer.write('VERIFY RESET\n');
-        }
+        preferencePrimed = false;
+        clearPreference();
         startReading().catch((err) => log(`Read error: ${err.message}`));
+        await homeServos();
       } catch (err) {
         log(`Connection failed: ${err.message}`);
         setStatus('warn', 'Connection failed—try again after checking the cable.');
@@ -1489,8 +1460,19 @@
       }
       connectBtn.disabled = role === 'guest';
       disconnectBtn.disabled = true;
+      preferencePrimed = false;
+      clearPreference();
       setStatus('idle', 'Disconnected. Connect the micro:bit, then press A to spin.');
-      setVerifyState(0, 'disconnected');
+    }
+
+    async function homeServos() {
+      if (!writer) return;
+      try {
+        await writer.write('SERVO ZERO\n');
+        log('You → SERVO ZERO (home servos)');
+      } catch (err) {
+        log(`Homing failed: ${err.message}`);
+      }
     }
 
     async function sendRaw(text) {
@@ -1559,7 +1541,12 @@
       const source = pendingSpinSource || 'roll';
       pendingSpinSource = null;
       closePreferencePrompt();
-      runSpin(source);
+      if (prefAutoSpin) {
+        runSpin(source);
+      } else {
+        log(`Preference locked for ${source}. Trigger the roll to continue.`);
+        setStatus('ok', 'Preference locked—start the vending pull.');
+      }
     }
 
     preferenceRadios.forEach((radio) => {
@@ -1646,7 +1633,6 @@
     slotLabel.textContent = 'Waiting for button A...';
     setStatus('idle', 'Press button A on the micro:bit or tap A on the keyboard to roll.');
     updateRoleUI();
-    updateVerifyBanner();
     ensurePeer();
   </script>
 </body>
