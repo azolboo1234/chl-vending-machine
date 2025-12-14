@@ -1053,15 +1053,15 @@
       log(codesVisible ? 'Join codes shown.' : 'Join codes hidden.');
     }
 
-    async function handleUltrasonicTrigger(source) {
+    async function handleDistanceTrigger(source) {
       if (source === 'sensor 2') {
-        log('Ultrasonic sensor 2 opened the preference picker. Use the rotary dial to choose before rolling.');
-        openPreferencePrompt('ultrasonic sensor 2', { autoSpin: false, primeOnly: true });
+        log('Distance sensor 2 opened the preference picker. Use the rotary dial to choose before rolling.');
+        openPreferencePrompt('distance sensor 2', { autoSpin: false, primeOnly: true });
         return;
       }
       if (source === 'sensor 1') {
-        log('Ultrasonic sensor 1 requested a roll.');
-        await triggerSpin('ultrasonic 1');
+        log('Distance sensor 1 requested a roll.');
+        await triggerSpin('distance 1');
       }
     }
 
@@ -1334,10 +1334,10 @@
         log('Guests cannot spin; the host needs to run the vending machine.');
         return;
       }
-      const isUltrasonic1 = typeof triggerSource === 'string' && triggerSource.toLowerCase().includes('ultrasonic 1');
-      if (isUltrasonic1 && !preferencePrimed) {
-        log('Ultrasonic sensor 1 tried to roll, but sensor 2 must open the preference prompt first.');
-        openPreferencePrompt('ultrasonic sensor 2', { autoSpin: false, primeOnly: true });
+      const isDistance1 = typeof triggerSource === 'string' && triggerSource.toLowerCase().includes('distance 1');
+      if (isDistance1 && !preferencePrimed) {
+        log('Distance sensor 1 tried to roll, but sensor 2 must open the preference prompt first.');
+        openPreferencePrompt('distance sensor 2', { autoSpin: false, primeOnly: true });
         return;
       }
       if (spinInProgress) {
@@ -1374,10 +1374,10 @@
             log(`micro:bit → ${trimmed}`);
             if (trimmed === 'BTN:A') {
               await triggerSpin('micro:bit BTN:A');
-            } else if (trimmed === 'ULTRA1') {
-              await handleUltrasonicTrigger('sensor 1');
-            } else if (trimmed === 'ULTRA2') {
-              await handleUltrasonicTrigger('sensor 2');
+            } else if (trimmed === 'DIST1') {
+              await handleDistanceTrigger('sensor 1');
+            } else if (trimmed === 'DIST2') {
+              await handleDistanceTrigger('sensor 2');
             } else if (trimmed.indexOf('DIAL:') === 0) {
               applyDialPreference(trimmed.split(':')[1] || '');
             }
