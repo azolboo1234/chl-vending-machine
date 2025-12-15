@@ -1470,6 +1470,8 @@
       try {
         await writer.write('SERVO ZERO\n');
         log('You → SERVO ZERO (home servos)');
+        await writer.write('CALIBRATE\n');
+        log('You → CALIBRATE (distance baselines)');
       } catch (err) {
         log(`Homing failed: ${err.message}`);
       }
