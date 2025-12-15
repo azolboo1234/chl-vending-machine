@@ -920,6 +920,7 @@
     let preferencePrimed = false;
     let codesVisible = false;
     let lastDialPreference = null;
+    let crankVerify = false;
     const peerOptions = { host: '0.peerjs.com', secure: true, port: 443, path: '/', debug: 1 };
 
     function resetPeer() {
@@ -1062,31 +1063,32 @@
       log(codesVisible ? 'Join codes shown.' : 'Join codes hidden.');
     }
 
+    function resetCrankFlow() {
+      crankVerify = false;
+    }
+
     async function handleMotionTrigger(source) {
-      if (source === 'sensor 2') {
-        log('Motion sensor 2 opened the preference picker. Use the rotary dial to choose before rolling.');
-        await sendSignal('ACK MOTION2', { quiet: true });
-        openPreferencePrompt('motion sensor 2', { autoSpin: false, primeOnly: true });
-        if (lastDialPreference) {
-          setPreference(lastDialPreference);
-          prefNote.textContent = `Rotary dial picked ${lastDialPreference === 'kitkat' ? 'KitKat' : 'Jolly Rancher'}.`;
-          commitPreferenceAndSpin();
-        }
+      if (source === 'sensor 1') {
+        crankVerify = true;
+        log('Motion sensor 1 detected movement — arming the crank and opening preferences.');
+        await sendSignal('ACK MOTION1', { quiet: true });
+        openPreferencePrompt('motion sensor 1', { autoSpin: false, primeOnly: true });
         return;
       }
-      if (source === 'sensor 1') {
-        log('Motion sensor 1 requested a roll.');
-        await sendSignal('ACK MOTION1', { quiet: true });
-        if (!currentPreference()) {
-          openPreferencePrompt('motion sensor 1', { autoSpin: true });
-          if (lastDialPreference) {
-            setPreference(lastDialPreference);
-            prefNote.textContent = `Rotary dial picked ${lastDialPreference === 'kitkat' ? 'KitKat' : 'Jolly Rancher'}.`;
-            commitPreferenceAndSpin();
-          }
+      if (source === 'sensor 2') {
+        await sendSignal('ACK MOTION2', { quiet: true });
+        if (!crankVerify) {
+          log('Motion sensor 2 ignored until sensor 1 arms the crank. Wave sensor 1 first.');
           return;
         }
-        await triggerSpin('motion 1');
+        log('Motion sensor 2 detected movement — spinning the vending machine.');
+        if (!currentPreference()) {
+          openPreferencePrompt('motion sensor 2', { autoSpin: true, primeOnly: true });
+          prefNote.textContent = 'Use the rotary dial to pick KitKat or Jolly before the roll.';
+          return;
+        }
+        crankVerify = false;
+        await triggerSpin('motion 2');
       }
     }
 
@@ -1349,6 +1351,7 @@
         log('Pick a preference first.');
         return;
       }
+      const sourceText = typeof triggerSource === 'string' ? triggerSource.toLowerCase() : '';
       const outcome = pickOutcome();
       log(`Vending spin (${triggerSource}): pref=${currentPreference()}, outcome=${outcome}`);
       setStatus('spin', `Spinning via ${triggerSource}...`);
@@ -1362,6 +1365,9 @@
       setStatus('ok', 'Spin finished—result sent to the micro:bit.');
       preferencePrimed = false;
       clearPreference();
+      if (sourceText.indexOf('motion 2') !== -1) {
+        resetCrankFlow();
+      }
     }
 
     async function triggerSpin(triggerSource) {
@@ -1371,6 +1377,14 @@
       }
       const sourceText = typeof triggerSource === 'string' ? triggerSource.toLowerCase() : '';
       const isMotion2 = sourceText.includes('motion 2');
+      if (isMotion2 && !crankVerify) {
+        log('Spin ignored until motion sensor 1 arms the crank.');
+        return;
+      }
+      if (!crankVerify && sourceText.includes('keyboard')) {
+        crankVerify = true;
+        log('Keyboard spin armed the crank flow.');
+      }
       if (!preferencePrimed && !isMotion2) {
         log('Waiting for motion sensor 2 to open the preference prompt before spinning.');
         openPreferencePrompt('motion sensor 2', { autoSpin: false, primeOnly: true });
@@ -1390,6 +1404,9 @@
       }
 
       await runSpin(triggerSource);
+      if (isMotion2) {
+        resetCrankFlow();
+      }
     }
 
     async function startReading() {
@@ -1451,6 +1468,7 @@
         setStatus('ok', 'Connected. Press A on the micro:bit or keyboard to spin.');
         preferencePrimed = false;
         clearPreference();
+        resetCrankFlow();
         startReading().catch((err) => log(`Read error: ${err.message}`));
         await homeServos();
       } catch (err) {
@@ -1498,6 +1516,7 @@
       disconnectBtn.disabled = true;
       preferencePrimed = false;
       clearPreference();
+      resetCrankFlow();
       setStatus('idle', 'Disconnected. Connect the micro:bit, then press A to spin.');
     }
 
@@ -1507,7 +1526,7 @@
         await writer.write('SERVO ZERO\n');
         log('You → SERVO ZERO (home servos)');
         await writer.write('CALIBRATE\n');
-        log('You → CALIBRATE (motion baselines)');
+        log('You → CALIBRATE (distance baselines)');
       } catch (err) {
         log(`Homing failed: ${err.message}`);
       }
