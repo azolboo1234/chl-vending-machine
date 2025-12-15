@@ -275,6 +275,9 @@
       transition: transform 260ms ease;
       will-change: transform, filter;
       transform: translateZ(0);
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .slot-window:not(.spinning):hover {
@@ -348,9 +351,13 @@
     .slot-label {
       position: absolute;
       bottom: 10px;
-      left: 0;
-      width: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
       text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       font-weight: 800;
       color: #ffe59a;
       text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
@@ -365,9 +372,11 @@
       background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.28));
       border: 1px solid rgba(255, 255, 255, 0.08);
       display: flex;
-      justify-content: space-between;
+      flex-direction: column;
+      justify-content: center;
       align-items: center;
-      gap: 1rem;
+      gap: 0.5rem;
+      text-align: center;
       color: #f7f8fb;
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
     }
@@ -1053,11 +1062,11 @@
       log(codesVisible ? 'Join codes shown.' : 'Join codes hidden.');
     }
 
-    async function handleDistanceTrigger(source) {
+    async function handleMotionTrigger(source) {
       if (source === 'sensor 2') {
-        log('Distance sensor 2 opened the preference picker. Use the rotary dial to choose before rolling.');
-        await sendSignal('ACK DIST2', { quiet: true });
-        openPreferencePrompt('distance sensor 2', { autoSpin: false, primeOnly: true });
+        log('Motion sensor 2 opened the preference picker. Use the rotary dial to choose before rolling.');
+        await sendSignal('ACK MOTION2', { quiet: true });
+        openPreferencePrompt('motion sensor 2', { autoSpin: false, primeOnly: true });
         if (lastDialPreference) {
           setPreference(lastDialPreference);
           prefNote.textContent = `Rotary dial picked ${lastDialPreference === 'kitkat' ? 'KitKat' : 'Jolly Rancher'}.`;
@@ -1066,10 +1075,10 @@
         return;
       }
       if (source === 'sensor 1') {
-        log('Distance sensor 1 requested a roll.');
-        await sendSignal('ACK DIST1', { quiet: true });
+        log('Motion sensor 1 requested a roll.');
+        await sendSignal('ACK MOTION1', { quiet: true });
         if (!currentPreference()) {
-          openPreferencePrompt('distance sensor 1', { autoSpin: true });
+          openPreferencePrompt('motion sensor 1', { autoSpin: true });
           if (lastDialPreference) {
             setPreference(lastDialPreference);
             prefNote.textContent = `Rotary dial picked ${lastDialPreference === 'kitkat' ? 'KitKat' : 'Jolly Rancher'}.`;
@@ -1077,13 +1086,16 @@
           }
           return;
         }
-        await triggerSpin('distance 1');
+        await triggerSpin('motion 1');
       }
     }
 
-    function clearPreference() {
+    function clearPreference(options = {}) {
+      const { resetDial = false } = options;
       activePreference = null;
-      lastDialPreference = null;
+      if (resetDial) {
+        lastDialPreference = null;
+      }
       preferencePrimed = false;
       preferenceRadios.forEach((r) => {
         r.checked = false;
@@ -1143,10 +1155,15 @@
       if (primeOnly) {
         preferencePrimed = true;
       }
-      clearPreference();
-      prefNote.textContent = `Triggered by ${source}. Pick a preference for this roll.`;
-      prefConfirm.disabled = true;
-      prefConfirmBottom.disabled = true;
+      clearPreference({ resetDial: false });
+      if (lastDialPreference) {
+        setPreference(lastDialPreference);
+        prefNote.textContent = `Rotary dial picked ${lastDialPreference === 'kitkat' ? 'KitKat' : 'Jolly Rancher'}.`;
+      } else {
+        prefNote.textContent = `Triggered by ${source}. Pick a preference for this roll.`;
+      }
+      prefConfirm.disabled = !currentPreference();
+      prefConfirmBottom.disabled = !currentPreference();
       prefOverlay.classList.add('open');
       prefOverlay.setAttribute('aria-hidden', 'false');
       log(`Preference needed for ${source} — choose KitKat or Jolly to continue.`);
@@ -1353,10 +1370,10 @@
         return;
       }
       const sourceText = typeof triggerSource === 'string' ? triggerSource.toLowerCase() : '';
-      const isDistance2 = sourceText.includes('distance 2');
-      if (!preferencePrimed && !isDistance2) {
-        log('Waiting for distance sensor 2 to open the preference prompt before spinning.');
-        openPreferencePrompt('distance sensor 2', { autoSpin: false, primeOnly: true });
+      const isMotion2 = sourceText.includes('motion 2');
+      if (!preferencePrimed && !isMotion2) {
+        log('Waiting for motion sensor 2 to open the preference prompt before spinning.');
+        openPreferencePrompt('motion sensor 2', { autoSpin: false, primeOnly: true });
         return;
       }
       if (spinInProgress) {
@@ -1393,10 +1410,10 @@
             log(`micro:bit → ${trimmed}`);
             if (trimmed === 'BTN:A') {
               await triggerSpin('micro:bit BTN:A');
-            } else if (trimmed === 'DIST1') {
-              await handleDistanceTrigger('sensor 1');
-            } else if (trimmed === 'DIST2') {
-              await handleDistanceTrigger('sensor 2');
+            } else if (trimmed === 'MOTION1') {
+              await handleMotionTrigger('sensor 1');
+            } else if (trimmed === 'MOTION2') {
+              await handleMotionTrigger('sensor 2');
             } else if (trimmed.indexOf('DIAL:') === 0) {
               applyDialPreference(trimmed.split(':')[1] || '');
             }
@@ -1490,7 +1507,7 @@
         await writer.write('SERVO ZERO\n');
         log('You → SERVO ZERO (home servos)');
         await writer.write('CALIBRATE\n');
-        log('You → CALIBRATE (distance baselines)');
+        log('You → CALIBRATE (motion baselines)');
       } catch (err) {
         log(`Homing failed: ${err.message}`);
       }
