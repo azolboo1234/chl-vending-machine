@@ -1334,9 +1334,10 @@
         log('Guests cannot spin; the host needs to run the vending machine.');
         return;
       }
-      const isDistance1 = typeof triggerSource === 'string' && triggerSource.toLowerCase().includes('distance 1');
-      if (isDistance1 && !preferencePrimed) {
-        log('Distance sensor 1 tried to roll, but sensor 2 must open the preference prompt first.');
+      const sourceText = typeof triggerSource === 'string' ? triggerSource.toLowerCase() : '';
+      const isDistance2 = sourceText.includes('distance 2');
+      if (!preferencePrimed && !isDistance2) {
+        log('Waiting for distance sensor 2 to open the preference prompt before spinning.');
         openPreferencePrompt('distance sensor 2', { autoSpin: false, primeOnly: true });
         return;
       }
