@@ -1068,27 +1068,43 @@
     }
 
     async function handleMotionTrigger(source) {
-      if (source === 'sensor 1') {
-        crankVerify = true;
-        log('Motion sensor 1 detected movement — arming the crank and opening preferences.');
-        await sendSignal('ACK MOTION1', { quiet: true });
-        openPreferencePrompt('motion sensor 1', { autoSpin: false, primeOnly: true });
-        return;
-      }
-      if (source === 'sensor 2') {
-        await sendSignal('ACK MOTION2', { quiet: true });
-        if (!crankVerify) {
-          log('Motion sensor 2 ignored until sensor 1 arms the crank. Wave sensor 1 first.');
-          return;
-        }
-        log('Motion sensor 2 detected movement — spinning the vending machine.');
-        if (!currentPreference()) {
-          openPreferencePrompt('motion sensor 2', { autoSpin: true, primeOnly: true });
-          prefNote.textContent = 'Use the rotary dial to pick KitKat or Jolly before the roll.';
-          return;
-        }
-        crankVerify = false;
-        await triggerSpin('motion 2');
+  // SENSOR 1 → arm the crank
+  if (source === 'sensor 1') {
+    crankVerify = true;
+    log('Motion sensor 1 detected — crank armed.');
+    await sendSignal('ACK MOTION1', { quiet: true });
+
+    openPreferencePrompt('motion sensor 1', {
+      autoSpin: false,
+      primeOnly: true,
+    });
+    return;
+  }
+
+  // SENSOR 2 → perform the roll
+  if (source === 'sensor 2') {
+    await sendSignal('ACK MOTION2', { quiet: true });
+
+    if (!crankVerify) {
+      log('Motion sensor 2 ignored — crank not armed.');
+      return;
+    }
+
+    log('Motion sensor 2 detected — triggering spin.');
+
+    if (!currentPreference()) {
+      openPreferencePrompt('motion sensor 2', {
+        autoSpin: true,
+        primeOnly: true,
+      });
+      prefNote.textContent =
+        'Use the rotary dial to pick KitKat or Jolly before the roll.';
+      return;
+    }
+
+    // ✅ DO NOT clear crankVerify here
+    await triggerSpin('motion 2');
+    return;
       }
     }
 
