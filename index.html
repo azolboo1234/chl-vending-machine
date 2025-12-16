@@ -1122,7 +1122,7 @@
       return activePreference;
     }
 
-    function applyDialPreference(rawValue) {
+    function applyDialPreference(rawValue) {   const upper = String(rawValue || '').trim().toUpperCase();   if (!upper) return;    // Accept either "DIAL:KITKAT" style payloads or just "KITKAT"/"JOLLY"   const normalized =     upper.includes('JOLLY') ? 'jolly' :     upper.includes('KITKAT') ? 'kitkat' :     null;    if (!normalized) return;   if (normalized === lastDialPreference) return;    lastDialPreference = normalized;   setPreference(normalized); // <-- updates the radio + card highlight immediately    if (prefOverlay.classList.contains('open')) {     // Live update UI, but DO NOT auto-commit/spin     prefNote.textContent =       `Rotary dial: ${normalized === 'kitkat' ? 'KitKat' : 'Jolly Rancher'} (live).`;     prefConfirm.disabled = false;     prefConfirmBottom.disabled = false;   } else {     log(`Rotary dial set preference to ${normalized === 'kitkat' ? 'KitKat' : 'Jolly Rancher'}.`);   } }
       const normalized = rawValue === 'JOLLY' ? 'jolly' : 'kitkat';
       if (normalized === lastDialPreference) return;
       lastDialPreference = normalized;
