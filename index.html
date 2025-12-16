@@ -1067,34 +1067,39 @@
       crankVerify = false;
     }
 
-    async function handleMotionTrigger(source) {
-  // SENSOR 1 → arm the crank
+   async function handleMotionTrigger(source) {
+  // SENSOR 1: arm crank + open preferences
   if (source === 'sensor 1') {
     crankVerify = true;
     log('Motion sensor 1 detected — crank armed.');
     await sendSignal('ACK MOTION1', { quiet: true });
 
+    // Open preference overlay for live dial updates
     openPreferencePrompt('motion sensor 1', {
       autoSpin: false,
       primeOnly: true,
     });
+
+    // IMPORTANT: do NOT queue a spin here
+    pendingSpinSource = null;
     return;
   }
 
-  // SENSOR 2 → perform the roll
+  // SENSOR 2: actually roll
   if (source === 'sensor 2') {
     await sendSignal('ACK MOTION2', { quiet: true });
 
     if (!crankVerify) {
-      log('Motion sensor 2 ignored — crank not armed.');
+      log('Motion sensor 2 ignored — wave sensor 1 first.');
       return;
     }
 
-    log('Motion sensor 2 detected — triggering spin.');
+    log('Motion sensor 2 detected — spinning.');
 
+    // If no preference yet, wait
     if (!currentPreference()) {
       openPreferencePrompt('motion sensor 2', {
-        autoSpin: true,
+        autoSpin: false,
         primeOnly: true,
       });
       prefNote.textContent =
@@ -1102,11 +1107,20 @@
       return;
     }
 
-    // ✅ DO NOT clear crankVerify here
-    await triggerSpin('motion 2');
-    return;
-      }
+    // CRITICAL FIX:
+    // clear any queued spin so this is allowed
+    pendingSpinSource = null;
+
+    // Close overlay if it is still open
+    if (prefOverlay.classList.contains('open')) {
+      closePreferencePrompt();
     }
+
+    crankVerify = false;
+    await runSpin('motion 2');
+    return;
+  }
+}
 
     function clearPreference(options = {}) {
       const { resetDial = false } = options;
