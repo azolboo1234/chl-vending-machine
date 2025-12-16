@@ -810,7 +810,7 @@
           <div id="slot-label" class="slot-label">Waiting for button A...</div>
         </div>
         <div class="slot-readout">
-          <div id="status-text" class="readout-text">Press button A on the micro:bit or tap the A key to spin the vending machine.</div>
+          <div id="status-text" class="readout-text">Press button A on the micro:bit or tap the A key to spin a one-column candy vending machine.</div>
           <div class="accent-bar" aria-hidden="true">
             <span></span><span></span><span></span>
           </div>
@@ -921,6 +921,10 @@
     let codesVisible = false;
     let lastDialPreference = null;
     let crankVerify = false;
+
+    // ✅ PATCH: dial only works when preference prompt was opened by sensor 1, and stops once spin starts
+    let dialWindowActive = false;
+
     const peerOptions = { host: '0.peerjs.com', secure: true, port: 443, path: '/', debug: 1 };
 
     function resetPeer() {
@@ -934,17 +938,13 @@
       remoteConnections.forEach((conn) => {
         try {
           conn.close();
-        } catch (_) {
-          // ignore
-        }
+        } catch (_) {}
       });
       remoteConnections.clear();
       if (hostConnection) {
         try {
           hostConnection.close();
-        } catch (_) {
-          // ignore
-        }
+        } catch (_) {}
       }
       peer = null;
       hostConnection = null;
@@ -1008,11 +1008,8 @@
 
     function ensurePeer() {
       if (peer) return;
-      if (role === 'host') {
-        startHostPeer();
-      } else {
-        startGuestPeer();
-      }
+      if (role === 'host') startHostPeer();
+      else startGuestPeer();
     }
 
     function broadcastLog(message) {
@@ -1032,9 +1029,7 @@
     function setStatus(state, text) {
       ['idle', 'spin', 'ok', 'warn'].forEach((cls) => statusChip.classList.remove(cls));
       statusChip.classList.add(state);
-      if (text) {
-        statusText.textContent = text;
-      }
+      if (text) statusText.textContent = text;
       const chipLabel =
         state === 'spin' ? 'Spinning' : state === 'ok' ? 'Connected' : state === 'warn' ? 'Attention' : 'Idle';
       statusChipText.textContent = chipLabel;
@@ -1050,11 +1045,8 @@
 
     function applyCodeVisibility() {
       if (!shareSection) return;
-      if (codesVisible) {
-        shareSection.classList.remove('codes-hidden');
-      } else {
-        shareSection.classList.add('codes-hidden');
-      }
+      if (codesVisible) shareSection.classList.remove('codes-hidden');
+      else shareSection.classList.add('codes-hidden');
     }
 
     function toggleCodesVisibility() {
@@ -1067,67 +1059,54 @@
       crankVerify = false;
     }
 
-   async function handleMotionTrigger(source) {
-  // SENSOR 1: arm crank + open preferences
-  if (source === 'sensor 1') {
-    crankVerify = true;
-    log('Motion sensor 1 detected — crank armed.');
-    await sendSignal('ACK MOTION1', { quiet: true });
+    async function handleMotionTrigger(source) {
+      if (source === 'sensor 1') {
+        crankVerify = true;
+        log('Motion sensor 1 detected — crank armed.');
+        await sendSignal('ACK MOTION1', { quiet: true });
 
-    // Open preference overlay for live dial updates
-    openPreferencePrompt('motion sensor 1', {
-      autoSpin: false,
-      primeOnly: true,
-    });
+        openPreferencePrompt('motion sensor 1', {
+          autoSpin: false,
+          primeOnly: true,
+        });
 
-    // IMPORTANT: do NOT queue a spin here
-    pendingSpinSource = null;
-    return;
-  }
+        pendingSpinSource = null;
+        return;
+      }
 
-  // SENSOR 2: actually roll
-  if (source === 'sensor 2') {
-    await sendSignal('ACK MOTION2', { quiet: true });
+      if (source === 'sensor 2') {
+        await sendSignal('ACK MOTION2', { quiet: true });
 
-    if (!crankVerify) {
-      log('Motion sensor 2 ignored — wave sensor 1 first.');
-      return;
+        if (!crankVerify) {
+          log('Motion sensor 2 ignored — wave sensor 1 first.');
+          return;
+        }
+
+        log('Motion sensor 2 detected — spinning.');
+
+        if (!currentPreference()) {
+          openPreferencePrompt('motion sensor 2', {
+            autoSpin: false,
+            primeOnly: true,
+          });
+          prefNote.textContent = 'Use the rotary dial to pick KitKat or Jolly before the roll.';
+          return;
+        }
+
+        pendingSpinSource = null;
+
+        if (prefOverlay.classList.contains('open')) closePreferencePrompt();
+
+        crankVerify = false;
+        await runSpin('motion 2');
+        return;
+      }
     }
-
-    log('Motion sensor 2 detected — spinning.');
-
-    // If no preference yet, wait
-    if (!currentPreference()) {
-      openPreferencePrompt('motion sensor 2', {
-        autoSpin: false,
-        primeOnly: true,
-      });
-      prefNote.textContent =
-        'Use the rotary dial to pick KitKat or Jolly before the roll.';
-      return;
-    }
-
-    // CRITICAL FIX:
-    // clear any queued spin so this is allowed
-    pendingSpinSource = null;
-
-    // Close overlay if it is still open
-    if (prefOverlay.classList.contains('open')) {
-      closePreferencePrompt();
-    }
-
-    crankVerify = false;
-    await runSpin('motion 2');
-    return;
-  }
-}
 
     function clearPreference(options = {}) {
       const { resetDial = false } = options;
       activePreference = null;
-      if (resetDial) {
-        lastDialPreference = null;
-      }
+      if (resetDial) lastDialPreference = null;
       preferencePrimed = false;
       preferenceRadios.forEach((r) => {
         r.checked = false;
@@ -1152,17 +1131,28 @@
       return activePreference;
     }
 
-    function applyDialPreference(rawValue) {   const upper = String(rawValue || '').trim().toUpperCase();   if (!upper) return;    // Accept either "DIAL:KITKAT" style payloads or just "KITKAT"/"JOLLY"   const normalized =     upper.includes('JOLLY') ? 'jolly' :     upper.includes('KITKAT') ? 'kitkat' :     null;    if (!normalized) return;   if (normalized === lastDialPreference) return;    lastDialPreference = normalized;   setPreference(normalized); // <-- updates the radio + card highlight immediately    if (prefOverlay.classList.contains('open')) {     // Live update UI, but DO NOT auto-commit/spin     prefNote.textContent =       `Rotary dial: ${normalized === 'kitkat' ? 'KitKat' : 'Jolly Rancher'} (live).`;     prefConfirm.disabled = false;     prefConfirmBottom.disabled = false;   } else {     log(`Rotary dial set preference to ${normalized === 'kitkat' ? 'KitKat' : 'Jolly Rancher'}.`);   } }
-      const normalized = rawValue === 'JOLLY' ? 'jolly' : 'kitkat';
+    // ✅ PATCH: dial only updates during sensor-1-opened preference overlay, and never auto-spins
+    function applyDialPreference(rawValue) {
+      if (!dialWindowActive) return;
+      if (!prefOverlay.classList.contains('open')) return;
+
+      const upper = String(rawValue || '').trim().toUpperCase();
+      if (!upper) return;
+
+      const normalized =
+        upper.includes('JOLLY') ? 'jolly' :
+        upper.includes('KITKAT') ? 'kitkat' :
+        null;
+
+      if (!normalized) return;
       if (normalized === lastDialPreference) return;
+
       lastDialPreference = normalized;
       setPreference(normalized);
-      if (prefOverlay.classList.contains('open')) {
-        prefNote.textContent = `Rotary dial picked ${normalized === 'kitkat' ? 'KitKat' : 'Jolly Rancher'}.`;
-        commitPreferenceAndSpin();
-      } else {
-        log(`Rotary dial set preference to ${normalized === 'kitkat' ? 'KitKat' : 'Jolly Rancher'}.`);
-      }
+
+      prefNote.textContent = `Rotary dial: ${normalized === 'kitkat' ? 'KitKat' : 'Jolly Rancher'} (live).`;
+      prefConfirm.disabled = false;
+      prefConfirmBottom.disabled = false;
     }
 
     function pickOutcome() {
@@ -1180,20 +1170,24 @@
       return 'Pulled: no candy';
     }
 
+    // ✅ PATCH: dial window active ONLY when opened by sensor 1
     function openPreferencePrompt(source, options = {}) {
+      dialWindowActive = String(source).toLowerCase().includes('sensor 1');
+
       const { autoSpin = true, primeOnly = false } = options;
       pendingSpinSource = source;
       prefAutoSpin = autoSpin;
-      if (primeOnly) {
-        preferencePrimed = true;
-      }
+      if (primeOnly) preferencePrimed = true;
+
       clearPreference({ resetDial: false });
+
       if (lastDialPreference) {
         setPreference(lastDialPreference);
         prefNote.textContent = `Rotary dial picked ${lastDialPreference === 'kitkat' ? 'KitKat' : 'Jolly Rancher'}.`;
       } else {
         prefNote.textContent = `Triggered by ${source}. Pick a preference for this roll.`;
       }
+
       prefConfirm.disabled = !currentPreference();
       prefConfirmBottom.disabled = !currentPreference();
       prefOverlay.classList.add('open');
@@ -1243,9 +1237,7 @@
 
     function buildReel(sequence) {
       slotReel.innerHTML = '';
-      sequence.forEach((outcome) => {
-        slotReel.appendChild(tileForOutcome(outcome));
-      });
+      sequence.forEach((outcome) => slotReel.appendChild(tileForOutcome(outcome)));
       cachedStride = null;
       const stride = measureStride();
       const offset = centeredPosition(0, stride);
@@ -1273,16 +1265,11 @@
     }
 
     function wait(ms) {
-      if (!('requestAnimationFrame' in window)) {
-        return new Promise((resolve) => setTimeout(resolve, ms));
-      }
+      if (!('requestAnimationFrame' in window)) return new Promise((resolve) => setTimeout(resolve, ms));
       return new Promise((resolve) => {
         const start = performance.now();
         function step(now) {
-          if (now - start >= ms) {
-            resolve();
-            return;
-          }
+          if (now - start >= ms) { resolve(); return; }
           requestAnimationFrame(step);
         }
         requestAnimationFrame(step);
@@ -1318,9 +1305,7 @@
 
       const sequence = [];
       const baseLength = 32;
-      for (let i = 0; i < baseLength; i += 1) {
-        sequence.push(reelOrder[i % reelOrder.length]);
-      }
+      for (let i = 0; i < baseLength; i += 1) sequence.push(reelOrder[i % reelOrder.length]);
       sequence.push(finalOutcome, finalOutcome);
 
       buildReel(sequence);
@@ -1381,23 +1366,26 @@
         log('Pick a preference first.');
         return;
       }
-      const sourceText = typeof triggerSource === 'string' ? triggerSource.toLowerCase() : '';
+
+      // ✅ PATCH: stop dial immediately when the slot machine starts rolling
+      dialWindowActive = false;
+
       const outcome = pickOutcome();
       log(`Vending spin (${triggerSource}): pref=${currentPreference()}, outcome=${outcome}`);
       setStatus('spin', `Spinning via ${triggerSource}...`);
       await animateSpin(outcome);
+
       const message = outcome === 'kitkat'
         ? 'PAYOUT KITKAT'
         : outcome === 'jolly'
           ? 'PAYOUT JOLLY'
           : 'PAYOUT NONE';
+
       await sendRaw(message);
       setStatus('ok', 'Spin finished—result sent to the micro:bit.');
       preferencePrimed = false;
       clearPreference();
-      if (sourceText.indexOf('motion 2') !== -1) {
-        resetCrankFlow();
-      }
+      if (String(triggerSource).toLowerCase().includes('motion 2')) resetCrankFlow();
     }
 
     async function triggerSpin(triggerSource) {
@@ -1425,16 +1413,15 @@
         return;
       }
       if (pendingSpinSource) {
-  // ✅ Allow motion sensor 2 to proceed even if something was queued earlier
-  if (isMotion2) {
-    log('Motion 2 arrived — clearing queued spin and proceeding.');
-    pendingSpinSource = null;
-    if (prefOverlay.classList.contains('open')) closePreferencePrompt();
-  } else {
-    log('Finish choosing a preference for the queued spin.');
-    return;
-  }
-}
+        if (isMotion2) {
+          log('Motion 2 arrived — clearing queued spin and proceeding.');
+          pendingSpinSource = null;
+          if (prefOverlay.classList.contains('open')) closePreferencePrompt();
+        } else {
+          log('Finish choosing a preference for the queued spin.');
+          return;
+        }
+      }
 
       if (!currentPreference()) {
         openPreferencePrompt(triggerSource, { autoSpin: true });
@@ -1442,9 +1429,7 @@
       }
 
       await runSpin(triggerSource);
-      if (isMotion2) {
-        resetCrankFlow();
-      }
+      if (isMotion2) resetCrankFlow();
     }
 
     async function startReading() {
@@ -1452,9 +1437,7 @@
       readLoopActive = true;
       while (readLoopActive && reader) {
         const { value, done } = await reader.read();
-        if (done) {
-          break;
-        }
+        if (done) break;
         if (value) {
           buffer += value;
           const parts = buffer.split(/\r?\n/);
@@ -1518,36 +1501,19 @@
     async function disconnect() {
       readLoopActive = false;
       if (reader) {
-        try {
-          await reader.cancel();
-        } catch (err) {
-          log(`Error canceling reader: ${err.message}`);
-        }
+        try { await reader.cancel(); } catch (err) { log(`Error canceling reader: ${err.message}`); }
         reader.releaseLock();
         reader = null;
       }
-      if (textDecoder && readableStreamClosed) {
-        await readableStreamClosed.catch(() => {});
-      }
+      if (textDecoder && readableStreamClosed) await readableStreamClosed.catch(() => {});
       if (writer) {
-        try {
-          await writer.close();
-        } catch (err) {
-          log(`Error closing writer: ${err.message}`);
-        }
+        try { await writer.close(); } catch (err) { log(`Error closing writer: ${err.message}`); }
         writer.releaseLock();
         writer = null;
       }
-      if (textEncoder && writableStreamClosed) {
-        await writableStreamClosed.catch(() => {});
-      }
+      if (textEncoder && writableStreamClosed) await writableStreamClosed.catch(() => {});
       if (port) {
-        try {
-          await port.close();
-          log('Disconnected.');
-        } catch (err) {
-          log(`Error closing port: ${err.message}`);
-        }
+        try { await port.close(); log('Disconnected.'); } catch (err) { log(`Error closing port: ${err.message}`); }
         port = null;
       }
       connectBtn.disabled = role === 'guest';
@@ -1580,9 +1546,7 @@
       }
       try {
         await writer.write(`${command}\n`);
-        if (!quiet) {
-          log(`You → ${command}`);
-        }
+        if (!quiet) log(`You → ${command}`);
       } catch (err) {
         log(`Signal failed: ${err.message}`);
       }
@@ -1623,27 +1587,15 @@
 
     function connectToHost() {
       const code = joinInput.value.trim();
-      if (!code) {
-        joinStatus.textContent = 'Enter a code first';
-        return;
-      }
-      if (!/^\d{4}$/.test(code)) {
-        joinStatus.textContent = 'Use the 4-digit host code';
-        return;
-      }
+      if (!code) { joinStatus.textContent = 'Enter a code first'; return; }
+      if (!/^\d{4}$/.test(code)) { joinStatus.textContent = 'Use the 4-digit host code'; return; }
       ensurePeer();
       joinStatus.textContent = 'Connecting...';
       hostConnection = peer.connect(code);
-      hostConnection.on('open', () => {
-        joinStatus.textContent = `Connected to host ${code}`;
-      });
+      hostConnection.on('open', () => { joinStatus.textContent = `Connected to host ${code}`; });
       hostConnection.on('data', (data) => handleRemoteData(hostConnection, data));
-      hostConnection.on('close', () => {
-        joinStatus.textContent = 'Disconnected from host';
-      });
-      hostConnection.on('error', (err) => {
-        joinStatus.textContent = `Join error: ${err.message}`;
-      });
+      hostConnection.on('close', () => { joinStatus.textContent = 'Disconnected from host'; });
+      hostConnection.on('error', (err) => { joinStatus.textContent = `Join error: ${err.message}`; });
     }
 
     function commitPreferenceAndSpin() {
@@ -1703,17 +1655,13 @@
     document.addEventListener('keydown', (event) => {
       if (event.key && event.key.toLowerCase() === 'a') {
         const active = document.activeElement;
-        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT')) {
-          return;
-        }
+        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT')) return;
         triggerSpin('keyboard A');
         return;
       }
       if (event.key && event.key.toLowerCase() === 'b') {
         const active = document.activeElement;
-        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT')) {
-          return;
-        }
+        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT')) return;
         if (!bypassMicrobit) {
           setBypass(true);
           log('Bypass enabled via keyboard B: spins can run without a connected micro:bit.');
@@ -1722,9 +1670,7 @@
       }
       if (event.key && event.key.toLowerCase() === 's') {
         const active = document.activeElement;
-        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT')) {
-          return;
-        }
+        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT')) return;
         toggleCodesVisibility();
       }
     });
