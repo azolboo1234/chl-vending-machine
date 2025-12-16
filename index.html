@@ -1451,7 +1451,7 @@
         return;
       }
       try {
-        port = await navigator.serial.requestPort({ filters: [{ usbVendorId: 0x0d28 }] });
+        port = await navigator.serial.requestPort();
         await port.open({ baudRate: 115200 });
 
         textEncoder = new TextEncoderStream();
