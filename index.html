@@ -1425,9 +1425,17 @@
         return;
       }
       if (pendingSpinSource) {
-        log('Finish choosing a preference for the queued spin.');
-        return;
-      }
+  // ✅ Allow motion sensor 2 to proceed even if something was queued earlier
+  if (isMotion2) {
+    log('Motion 2 arrived — clearing queued spin and proceeding.');
+    pendingSpinSource = null;
+    if (prefOverlay.classList.contains('open')) closePreferencePrompt();
+  } else {
+    log('Finish choosing a preference for the queued spin.');
+    return;
+  }
+}
+
       if (!currentPreference()) {
         openPreferencePrompt(triggerSource, { autoSpin: true });
         return;
